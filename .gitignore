@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# random
+try.py
+experiments/*
+!experiments/.gitkeep
