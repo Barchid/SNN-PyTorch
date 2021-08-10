@@ -133,3 +133,5 @@ dmypy.json
 try.py
 experiments/*
 !experiments/.gitkeep
+data/*
+!data/.gitkeep
