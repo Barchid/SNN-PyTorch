@@ -42,6 +42,8 @@ def get_args():
     # training related
     parser.add_argument('--experiment', required=True,
                         type=str, help="Name of the experiment.")
+    parser.add_argument('--debug', action='store_true',
+                        help="If used, forces to overfit only one batch of the train split (to debug the network).")
 
     # SNN online learning related
     parser.add_argument('--timesteps', '-t', type=int, default=500,
