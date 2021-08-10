@@ -18,12 +18,9 @@ def get_args():
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
     parser.add_argument('-b', '--batch-size', default=8, type=int,
-                        metavar='N',
-                        help='mini-batch size (default: 8), this is the total '
-                        'batch size of all GPUs on the current node when '
-                        'using Data Parallel or Distributed Data Parallel')
+                        metavar='N', help='mini-batch size (default: 8).')
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                        metavar='LR', help='initial learning rate', dest='lr')
+                        metavar='LR', help='initial learning rate (default: 0.1).', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
@@ -41,4 +38,14 @@ def get_args():
                         help='seed for initializing training. ')
     parser.add_argument('--summary', action='store_true',
                         help="Prints a summary of the model to be trained.")
+
+    # training related
+    parser.add_argument('--experiment', required=True,
+                        type=str, help="Name of the experiment.")
+
+    # SNN online learning related
+    parser.add_argument('--timesteps', '-t', type=int, default=500,
+                        help="Number of timesteps that compose a forward pass (default: 500).")
+    parser.add_argument('--burnin', type=int, default=50,
+                        help="Number of steps at the beginning of the forward pass where no learning rule is applied. It is used to put some activity in the SNN (default: 50).")
     return parser.parse_args()
