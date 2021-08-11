@@ -137,6 +137,8 @@ def main():
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
         }, is_best, filename=f'{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
+    
+    tensorboard_meter.close()
 
 
 def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter, optimizer=None):
