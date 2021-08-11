@@ -3,7 +3,7 @@ import os
 import random
 import shutil
 import time
-from utils.meters import AverageMeter, ProgressMeter
+from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args import get_args
 import warnings
 
@@ -15,15 +15,12 @@ import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-import torchvision.models as models
 
+# GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-model_names = sorted(name for name in models.__dict__
-                     if name.islower() and not name.startswith("__")
-                     and callable(models.__dict__[name]))
-
-best_acc1 = 0.
+# TODO: best accuracy metrics (used to save the best checkpoints)
+best_acc = 0.
 
 
 def main():
@@ -39,14 +36,23 @@ def main():
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    # define model
-    model = None  # TODO
+    # create the experiment dir if it does not exist
+    if not os.path.exists(os.path.join('experiments', args.experiments)):
+        os.mkdir(os.path.join('experiments', args.experiments))
 
-    # define loss function (criterion) and optimizer
+    # TODO: define model
+    model = None
+
+    # TODO: define loss function
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+
+    # TODO: define optimizer
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        args.lr,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay
+    )
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -54,7 +60,7 @@ def main():
             print("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
-            best_acc1 = checkpoint['best_acc1'].to(device)
+            best_acc = checkpoint['best_acc'].to(device)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
@@ -64,7 +70,7 @@ def main():
 
     cudnn.benchmark = True
 
-    # Data loading code
+    # TODO: dataloaders code
     traindir = os.path.join(args.data, 'train')
     valdir = os.path.join(args.data, 'val')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -79,7 +85,7 @@ def main():
             normalize,
         ]))
 
-    must_shuffle = False if args.debug else False
+    must_shuffle = False if args.debug else True
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=must_shuffle, num_workers=args.workers, pin_memory=True)
 
@@ -93,51 +99,56 @@ def main():
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
+    # If only evaluating the model is required
     if args.evaluate:
         _, _, _ = one_epoch(val_loader, model, criterion,
                             0, args, optimizer=None)
         return
 
+    # define tensorboard meter
+    tensorboard_meter = TensorboardMeter(f"experiments/{args.experiment}/logs")
+
+    # TRAINING + VALIDATION LOOP
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        _, _, _ = one_epoch(train_loader, model, criterion,
-                            epoch, args, optimizer=optimizer)  # TODO
+        acc, loss = one_epoch(train_loader, model, criterion,
+                              epoch, args, tensorboard_meter, optimizer=optimizer)  # TODO
 
-        # evaluate on validation set
-        _, _, _ = one_epoch(val_loader, model, criterion,
-                            epoch, args, optimizer=None)
+        # evaluate on validation set (optimizer is None when validation)
+        acc, loss = one_epoch(val_loader, model, criterion,
+                              epoch, args, tensorboard_meter, optimizer=None)
 
-        # remember best acc@1 and save checkpoint
-        # TODO
-        is_best = acc1 > best_acc1
-        best_acc1 = max(acc1, best_acc1)
+        # remember best accuracy and save checkpoint
+        is_best = acc > best_acc
+        best_acc = max(acc, best_acc)
 
-        if not args.multiprocessing_distributed or (args.multiprocessing_distributed
-                                                    and args.rank % ngpus_per_node == 0):
-            save_checkpoint({
-                'epoch': epoch + 1,
-                'arch': args.arch,
-                'state_dict': model.state_dict(),
-                'best_acc1': best_acc1,
-                'optimizer': optimizer.state_dict(),
-            }, is_best)
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': args.arch,
+            'state_dict': model.state_dict(),
+            'best_acc': best_acc,
+            'optimizer': optimizer.state_dict(),
+        }, is_best, filename=f'{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
 
 
-def one_epoch(dataloader, model, criterion, epoch, args, optimizer=None):
+def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter, optimizer=None):
     """One epoch pass. If the optimizer is not None, the function works in training mode. 
     """
+    # TODO: define AverageMeters (print some metrics at the end of the epoch)
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
+    accuracies = AverageMeter('Accuracy', ':6.2f')
+
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
+
+    # TODO: final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
         len(dataloader),
-        [batch_time, data_time, losses, top1, top5],
+        [batch_time, data_time, losses, accuracies],
         prefix=f"{prefix} - Epoch: [{epoch}]")
 
     # switch to train mode (if training)
@@ -159,10 +170,10 @@ def one_epoch(dataloader, model, criterion, epoch, args, optimizer=None):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        acc1, acc5 = torch.Tensor(1.1), torch.Tensor(4.4)  # TODO
+        # TODO: define accuracy metrics
+        accuracy = torch.Tensor(1.1)  # TODO: here
         losses.update(loss.item(), images.size(0))
-        top1.update(acc1[0], images.size(0))
-        top5.update(acc5[0], images.size(0))
+        accuracies.update(accuracy[0], images.size(0))
 
         if is_training:
             # compute gradient and do SGD step
@@ -181,7 +192,13 @@ def one_epoch(dataloader, model, criterion, epoch, args, optimizer=None):
         if args.debug:
             break
 
-        return top1.avg, top5.avg, losses.avg # TODO
+        # TODO: define AverageMeters used in tensorboard summary
+        if is_training:
+            tensorboard_meter.update_train([accuracies, losses])
+        else:
+            tensorboard_meter.update_val([accuracies, losses])
+
+        return accuracies.avg, losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):

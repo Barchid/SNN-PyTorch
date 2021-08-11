@@ -1,3 +1,8 @@
+from typing import List
+import torch
+from torch.utils.tensorboard import SummaryWriter
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 
@@ -40,7 +45,43 @@ class ProgressMeter(object):
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
 
-class TensorboardMeter:
-    def __init__(self, name, age):
-        self.name = name
-        self.age = age
+class TensorboardMeter(object):
+    def __init__(self, experiment: str):
+        self.writer = SummaryWriter(experiment)
+
+        # temporary variable that stores all train values
+        self.tmp_trainvals = {}
+
+    def update_train(self, meters: List[AverageMeter]):
+        """Stores all values from the AverageMeters of the training step.
+
+        Args:
+            meters (List[AverageMeter]): AverageMeters from the training step
+        """
+        for meter in meters:
+            self.tmp_trainvals[meter.name] = meter.avg
+
+    def update_val(self, meters: List[AverageMeter], epoch: int):
+        """Saves all train-validation pairs in the Tensorboard logdir
+
+        Args:
+            meters (List[AverageMeter]): AverageMeters from the validation step
+            epoch (int): epoch number to write in the Tensorboard logdir
+        """
+        for meter in meters:
+            # Only writes the AverageMeters that were already present in the training step
+            if meter.name in self.tmp_trainvals:
+                self.writer.add_scalars(
+                    meter.name,
+                    {
+                        'train': self.tmp_trainvals[meter.name],
+                        'val': meter.avg
+                    },
+                    epoch
+                )
+
+        # Ensures the writer completes the validation step
+        self.writer.flush()
+
+    def close(self):
+        self.writer.close()
