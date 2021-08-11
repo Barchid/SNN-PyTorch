@@ -15,6 +15,7 @@ import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+from torchsummary import summary
 
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -53,6 +54,11 @@ def main():
         momentum=args.momentum,
         weight_decay=args.weight_decay
     )
+
+    # TODO: define input_size here to have the right summary of your model
+    if args.summary:
+        summary(model, input_size=(3, 224, 224))
+        exit()
 
     # optionally resume from a checkpoint
     if args.resume:
