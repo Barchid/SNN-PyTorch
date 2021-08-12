@@ -175,6 +175,7 @@ def create_dataloader(
         transform_test = None,
         target_transform_train = None,
         target_transform_test = None,
+        shuffle_train=True,
         **dl_kwargs):
 
     train_d, test_d = create_datasets(
@@ -190,7 +191,7 @@ def create_dataloader(
         target_transform_test = target_transform_test)
 
 
-    train_dl = torch.utils.data.DataLoader(train_d, shuffle=True, batch_size=batch_size, **dl_kwargs)
+    train_dl = torch.utils.data.DataLoader(train_d, shuffle=shuffle_train, batch_size=batch_size, **dl_kwargs)
     test_dl = torch.utils.data.DataLoader(test_d, shuffle=False, batch_size=batch_size, **dl_kwargs)
 
     return train_dl, test_dl
