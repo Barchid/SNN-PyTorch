@@ -1,4 +1,6 @@
 import argparse
+from snn.base import DECOLLELoss
+from models.nmnist_cnn import LenetDECOLLE
 import os
 import random
 import shutil
@@ -41,23 +43,35 @@ def main():
     if not os.path.exists(os.path.join('experiments', args.experiments)):
         os.mkdir(os.path.join('experiments', args.experiments))
 
-    # TODO: define model
-    model = None
+    model = LenetDECOLLE(
+        (2, 34, 34),
+        Nhid=[64, 128, 128],
+        Mhid=[],
+        out_channels=10,
+        kernel_size=[7],
+        stride=[1],
+        pool_size=[2, 1, 2],
+        alpha=[0.97],
+        beta=[0.85],
+        num_conv_layers=3,
+        num_mlp_layers=0,
+        deltat=1000
+    )
 
     # TODO: define loss function
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = DECOLLELoss(
+        net=model, loss_fn=[nn.SmoothL1Loss() for i in range(len(model))])
 
     # TODO: define optimizer
-    optimizer = torch.optim.SGD(
-        model.parameters(),
+    optimizer = torch.optim.Adamax(
+        model.get_trainable_parameters(),
         args.lr,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay
+        betas=[0.0, 0.95]
     )
 
     # TODO: define input_size here to have the right summary of your model
     if args.summary:
-        summary(model, input_size=(3, 224, 224))
+        summary(model, input_size=(2, 34, 34))
         exit()
 
     # optionally resume from a checkpoint
@@ -137,7 +151,7 @@ def main():
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
         }, is_best, filename=f'{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
-    
+
     tensorboard_meter.close()
 
 

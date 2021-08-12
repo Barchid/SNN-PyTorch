@@ -1,20 +1,46 @@
-"""
-Base implementations for PyTorch-based SNNs.
-Implementation taken from https://github.com/nmi-lab/decolle-public/blob/master/decolle/base_model.py
-"""
-
-import torch
+#!/bin/python
+# -----------------------------------------------------------------------------
+# File Name : base.py
+# Purpose:
+#
+# Author: Emre Neftci
+#
+# Creation Date : 12-03-2019
+# Last Modified : Tue 12 Mar 2019 04:51:44 PM PDT
+#
+# Copyright : (c)
+# Licence : GPLv2
+# -----------------------------------------------------------------------------
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
+import torch
+import numpy as np
+from itertools import chain
 from collections import namedtuple
 import warnings
-import numpy as np
 
 dtype = torch.float32
 
 sigmoid = nn.Sigmoid()
 relu = nn.ReLU()
+
+
+def get_output_shape(input_shape, kernel_size=[3, 3], stride=[1, 1], padding=[1, 1], dilation=[0, 0]):
+    if not hasattr(kernel_size, '__len__'):
+        kernel_size = [kernel_size, kernel_size]
+    if not hasattr(stride, '__len__'):
+        stride = [stride, stride]
+    if not hasattr(padding, '__len__'):
+        padding = [padding, padding]
+    if not hasattr(dilation, '__len__'):
+        dilation = [dilation, dilation]
+    im_height = input_shape[-2]
+    im_width = input_shape[-1]
+    height = int((im_height + 2 * padding[0] - dilation[0] *
+                  (kernel_size[0] - 1) - 1) // stride[0] + 1)
+    width = int((im_width + 2 * padding[1] - dilation[1] *
+                 (kernel_size[1] - 1) - 1) // stride[1] + 1)
+    return [height, width]
 
 
 class SmoothStep(torch.autograd.Function):
@@ -53,22 +79,73 @@ smooth_step = SmoothStep().apply
 smooth_sigmoid = SigmoidStep().apply
 
 
-def get_output_shape(input_shape, kernel_size=[3, 3], stride=[1, 1], padding=[1, 1], dilation=[0, 0]):
-    if not hasattr(kernel_size, '__len__'):
-        kernel_size = [kernel_size, kernel_size]
-    if not hasattr(stride, '__len__'):
-        stride = [stride, stride]
-    if not hasattr(padding, '__len__'):
-        padding = [padding, padding]
-    if not hasattr(dilation, '__len__'):
-        dilation = [dilation, dilation]
-    im_height = input_shape[-2]
-    im_width = input_shape[-1]
-    height = int((im_height + 2 * padding[0] - dilation[0] *
-                  (kernel_size[0] - 1) - 1) // stride[0] + 1)
-    width = int((im_width + 2 * padding[1] - dilation[1] *
-                 (kernel_size[1] - 1) - 1) // stride[1] + 1)
-    return [height, width]
+class LinearFAFunction(torch.autograd.Function):
+    '''from https://github.com/L0SG/feedback-alignment-pytorch/'''
+    @staticmethod
+    # same as reference linear function, but with additional fa tensor for backward
+    def forward(context, input, weight, weight_fa, bias=None):
+        context.save_for_backward(input, weight, weight_fa, bias)
+        output = input.mm(weight.t())
+        if bias is not None:
+            output += bias.unsqueeze(0).expand_as(output)
+        return output
+
+    @staticmethod
+    def backward(context, grad_output):
+        input, weight, weight_fa, bias = context.saved_tensors
+        grad_input = grad_weight = grad_weight_fa = grad_bias = None
+
+        if context.needs_input_grad[0]:
+            # all of the logic of FA resides in this one line
+            # calculate the gradient of input with fixed fa tensor, rather than the "correct" model weight
+            grad_input = grad_output.mm(weight_fa)
+        if context.needs_input_grad[1]:
+            # grad for weight with FA'ed grad_output from downstream layer
+            # it is same with original linear function
+            grad_weight = grad_output.t().mm(input)
+        if bias is not None and context.needs_input_grad[3]:
+            grad_bias = grad_output.sum(0).squeeze(0)
+
+        return grad_input, grad_weight, grad_weight_fa, grad_bias
+
+
+class FALinear(nn.Module):
+    '''from https://github.com/L0SG/feedback-alignment-pytorch/'''
+
+    def __init__(self, input_features, output_features, bias=True):
+        super(FALinear, self).__init__()
+        self.input_features = input_features
+        self.output_features = output_features
+
+        # weight and bias for forward pass
+        # weight has transposed form; more efficient (so i heard) (transposed at forward pass)
+        self.weight = nn.Parameter(
+            torch.Tensor(output_features, input_features))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(output_features))
+        else:
+            self.register_parameter('bias', None)
+
+        # fixed random weight and bias for FA backward pass
+        # does not need gradient
+        self.weight_fa = torch.nn.Parameter(torch.FloatTensor(
+            output_features, input_features), requires_grad=False)
+
+        # weight initialization
+        # torch.nn.init.kaiming_uniform(self.weight)
+        # torch.nn.init.kaiming_uniform(self.weight_fa)
+        #torch.nn.init.constant(self.bias, 1)
+        # does not need gradient
+        self.weight_fa = torch.nn.Parameter(torch.FloatTensor(
+            output_features, input_features), requires_grad=False)
+
+        # weight initialization
+        # torch.nn.init.kaiming_uniform(self.weight)
+        # torch.nn.init.kaiming_uniform(self.weight_fa)
+        #torch.nn.init.constant(self.bias, 1)
+
+    def forward(self, input):
+        return LinearFAFunction.apply(input, self.weight, self.weight_fa, self.bias)
 
 
 def state_detach(state):
@@ -188,7 +265,7 @@ class LIFLayer(nn.Module):
         Q = self.beta * state.Q + self.tau_s * Sin_t
         P = self.alpha * state.P + self.tau_m * state.Q
         R = self.alpharp * state.R - state.S * self.wrp
-        U = self.base_layer(P) + R
+        U = self.base_layer(P.float()) + R
         S = self.sg_function(U)
         self.state = self.NeuronState(P=P, Q=Q, R=R, S=S)
         if self.do_detach:
@@ -298,3 +375,111 @@ class LIFLayerVariableTau(LIFLayer):
         self.tau_s = torch.nn.Parameter(
             1. / (1 - self.beta), requires_grad=False)
         self.reset_parameters(self.base_layer)
+
+
+class DECOLLEBase(nn.Module):
+    requires_init = True
+
+    def __init__(self):
+
+        super(DECOLLEBase, self).__init__()
+
+        self.LIF_layers = nn.ModuleList()
+        self.readout_layers = nn.ModuleList()
+
+    def __len__(self):
+        return len(self.LIF_layers)
+
+    def forward(self, input):
+        raise NotImplemented('')
+
+    @property
+    def output_layer(self):
+        return self.readout_layers[-1]
+
+    def get_trainable_parameters(self, layer=None):
+        if layer is None:
+            return chain(*[l.parameters() for l in self.LIF_layers])
+        else:
+            return self.LIF_layers[layer].parameters()
+
+    def get_trainable_named_parameters(self, layer=None):
+        if layer is None:
+            params = dict()
+            for k, p in self.named_parameters():
+                if p.requires_grad:
+                    params[k] = p
+
+            return params
+        else:
+            return self.LIF_layers[layer].named_parameters()
+
+    def init(self, data_batch, burnin):
+        '''
+        Necessary to reset the state of the network whenever a new batch is presented
+        '''
+        if self.requires_init is False:
+            return
+        for l in self.LIF_layers:
+            l.state = None
+        with torch.no_grad():
+            for i in range(max(len(self), burnin)):
+                self.forward(data_batch[:, i, :, :])
+
+    def init_parameters(self, data_batch):
+        Sin_t = data_batch[:, 0, :, :]
+        s_out, r_out = self.forward(Sin_t)[:2]
+        ins = [self.LIF_layers[0].state.Q]+s_out
+        for i, l in enumerate(self.LIF_layers):
+            l.init_parameters(ins[i])
+
+    def reset_lc_parameters(self, layer, lc_ampl):
+        stdv = lc_ampl / np.sqrt(layer.weight.size(1))
+        layer.weight.data.uniform_(-stdv, stdv)
+        self.reset_lc_bias_parameters(layer, lc_ampl)
+
+    def reset_lc_bias_parameters(self, layer, lc_ampl):
+        stdv = lc_ampl / np.sqrt(layer.weight.size(1))
+        if layer.bias is not None:
+            layer.bias.data.uniform_(-stdv, stdv)
+
+    def get_input_layer_device(self):
+        if hasattr(self.LIF_layers[0], 'get_device'):
+            return self.LIF_layers[0].get_device()
+        else:
+            return list(self.LIF_layers[0].parameters())[0].device
+
+    def get_output_layer_device(self):
+        return self.output_layer.weight.device
+
+
+class DECOLLELoss(object):
+    def __init__(self, loss_fn, net, reg_l=None):
+        self.loss_fn = loss_fn
+        self.nlayers = len(net)
+        self.num_losses = len([l for l in loss_fn if l is not None])
+        assert len(loss_fn) == self.nlayers, "Mismatch is in number of loss functions and layers. You need to specify one loss function per layer"
+        self.reg_l = reg_l
+        if self.reg_l is None:
+            self.reg_l = [0 for _ in range(self.nlayers)]
+
+    def __len__(self):
+        return self.nlayers
+
+    def __call__(self, s, r, u, target, mask=1, sum_=True):
+        loss_tv = []
+        for i, loss_layer in enumerate(self.loss_fn):
+            if loss_layer is not None:
+                uflat = u[i].reshape(u[i].shape[0], -1)
+                loss_tv.append(loss_layer(r[i]*mask, target*mask))
+                if self.reg_l[i] > 0:
+                    reg1_loss = self.reg_l[i]*1e-2 * \
+                        ((relu(uflat+.01)*mask)).mean()
+                    reg2_loss = self.reg_l[i]*6e-5 * \
+                        relu((mask*(.1-sigmoid(uflat))).mean())
+                    loss_tv[-1] += reg1_loss + reg2_loss
+
+        if sum_:
+            return sum(loss_tv)
+        else:
+            return loss_tv
