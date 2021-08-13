@@ -1,5 +1,7 @@
 import argparse
-from snn.base import DECOLLELoss
+from utils.misc import tonp
+from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
+from snn.base import DECOLLEBase, DECOLLELoss
 from models.nmnist_cnn import LenetDECOLLE
 import os
 import random
@@ -58,18 +60,18 @@ def main():
         deltat=1000
     )
 
-    # TODO: define loss function
+    # define loss function
     criterion = DECOLLELoss(
-        net=model, loss_fn=[nn.SmoothL1Loss() for i in range(len(model))])
+        net=model, loss_fn=[nn.SmoothL1Loss() for _ in range(len(model))])
 
-    # TODO: define optimizer
+    # define optimizer
     optimizer = torch.optim.Adamax(
         model.get_trainable_parameters(),
         args.lr,
         betas=[0.0, 0.95]
     )
 
-    # TODO: define input_size here to have the right summary of your model
+    # define input_size here to have the right summary of your model
     if args.summary:
         summary(model, input_size=(2, 34, 34))
         exit()
@@ -90,34 +92,17 @@ def main():
 
     cudnn.benchmark = True
 
-    # TODO: dataloaders code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ]))
-
+    # dataloaders code
     must_shuffle = False if args.debug else True
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=must_shuffle, num_workers=args.workers, pin_memory=True)
-
-    val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+    train_loader, val_loader = create_dataloader(
+        root="data/nmnist/n_mnist.hdf5",
+        chunk_size_train=300,
+        chunk_size_test=300,
+        batch_size=args.batch_size,
+        dt=args.timesteps,
+        num_workers=args.workers,
+        shuffle_train=must_shuffle
+    )
 
     # If only evaluating the model is required
     if args.evaluate:
@@ -130,11 +115,10 @@ def main():
 
     # TRAINING + VALIDATION LOOP
     for epoch in range(args.start_epoch, args.epochs):
-        adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
         acc, loss = one_epoch(train_loader, model, criterion,
-                              epoch, args, tensorboard_meter, optimizer=optimizer)  # TODO
+                              epoch, args, tensorboard_meter, optimizer=optimizer)
 
         # evaluate on validation set (optimizer is None when validation)
         acc, loss = one_epoch(val_loader, model, criterion,
@@ -146,7 +130,6 @@ def main():
 
         save_checkpoint({
             'epoch': epoch + 1,
-            'arch': args.arch,
             'state_dict': model.state_dict(),
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
@@ -156,9 +139,9 @@ def main():
 
 
 def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter, optimizer=None):
-    """One epoch pass. If the optimizer is not None, the function works in training mode. 
+    """One epoch pass. If the optimizer is not None, the function works in training mode.
     """
-    # TODO: define AverageMeters (print some metrics at the end of the epoch)
+    # define AverageMeters (print some metrics at the end of the epoch)
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -167,7 +150,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
 
-    # TODO: final Progress Meter (add the relevant AverageMeters)
+    # final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
         len(dataloader),
         [batch_time, data_time, losses, accuracies],
@@ -229,11 +212,40 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args):
+    loss_mask = (targets.sum(2) > 0).unsqueeze(2).float()
+
+    # burnin phase
+    model.init(images, args.burnin)
+    t_sample = images.shape[1]
+
+    # per-layer losses for the whole batch
+    loss_tv = torch.tensor(0.).to(device)
+
+    # total loss for the whole inference process
+    total_loss = torch.tensor(0.).to(device)
+
+    # FOR EACH TIMESTEPS
+    for k in (range(args.burnin, t_sample)):
+        s, r, u = model(images[:, k, :, :])
+        loss_ = criterion(
+            s, r, u, target=targets[:, k, :], mask=loss_mask[:, k, :], sum_=False)
+
+        loss_tv += sum(loss_)
+        total_loss += loss_tv
+
+        # ONLINE LEARNING UPDATE
+        loss_tv.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # for i in range(len(model)):
+            # act_rate[i] += tonp(s[i].mean().data)/t_sample
+
+        # reinitialize loss_tv 
+        loss_tv = torch.tensor(0.).to(device)
+
+    return total_loss
 
 
 if __name__ == '__main__':
