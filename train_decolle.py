@@ -42,8 +42,8 @@ def main():
                       'from checkpoints.')
 
     # create the experiment dir if it does not exist
-    if not os.path.exists(os.path.join('experiments', args.experiments)):
-        os.mkdir(os.path.join('experiments', args.experiments))
+    if not os.path.exists(os.path.join('experiments', args.experiment)):
+        os.mkdir(os.path.join('experiments', args.experiment))
 
     model = LenetDECOLLE(
         (2, 34, 34),

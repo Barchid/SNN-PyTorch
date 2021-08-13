@@ -46,8 +46,8 @@ def get_args():
                         help="If used, forces to overfit only one batch of the train split (to debug the network).")
 
     # SNN online learning related
-    parser.add_argument('--timesteps', '-t', type=int, default=500,
-                        help="Number of timesteps that compose a forward pass (default: 500).")
+    parser.add_argument('--timesteps', '-t', type=int, default=1000,
+                        help="Delta T.")
     parser.add_argument('--burnin', type=int, default=50,
                         help="Number of steps at the beginning of the forward pass where no learning rule is applied. It is used to put some activity in the SNN (default: 50).")
     return parser.parse_args()
