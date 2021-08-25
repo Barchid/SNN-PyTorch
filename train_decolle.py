@@ -46,7 +46,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     model = LenetDECOLLE(
-        (2, 34, 34),
+        (2, 32, 32),
         Nhid=[64, 128, 128],
         Mhid=[],
         out_channels=10,
@@ -93,6 +93,7 @@ def main():
     cudnn.benchmark = True
 
     # dataloaders code
+    print('Create data loaders')
     must_shuffle = False if args.debug else True
     train_loader, val_loader = create_dataloader(
         root="data/nmnist/n_mnist.hdf5",
@@ -104,6 +105,12 @@ def main():
         shuffle_train=must_shuffle
     )
 
+    # Initialize parameters
+    print('Init parameters')
+    data_batch, _ = next(iter(train_loader))
+    data_batch = torch.Tensor(data_batch).to(device)
+    model.init_parameters(data_batch)
+
     # If only evaluating the model is required
     if args.evaluate:
         _, _, _ = one_epoch(val_loader, model, criterion,
@@ -114,6 +121,7 @@ def main():
     tensorboard_meter = TensorboardMeter(f"experiments/{args.experiment}/logs")
 
     # TRAINING + VALIDATION LOOP
+    print('BEGINNING TRAINING LOOP')
     for epoch in range(args.start_epoch, args.epochs):
 
         # train for one epoch
@@ -133,7 +141,7 @@ def main():
             'state_dict': model.state_dict(),
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
-        }, is_best, filename=f'{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
+        }, is_best, filename=f'experiments/{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
 
     tensorboard_meter.close()
 
@@ -163,28 +171,22 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         model.eval()
 
     end = time.time()
-    for i, (images, target) in enumerate(dataloader):
+    for i, (images, targets) in enumerate(dataloader):
         # measure data loading time
         data_time.update(time.time() - end)
 
         images = images.to(device)
-        target = target.to(device)
+        targets = targets.to(device)
 
         # compute output
-        output = model(images)
-        loss = criterion(output, target)
+        total_loss = snn_inference(
+            images, targets, model, criterion, optimizer, args, is_training)
 
         # measure accuracy and record loss
         # TODO: define accuracy metrics
         accuracy = torch.Tensor(1.1)  # TODO: here
-        losses.update(loss.item(), images.size(0))
+        losses.update(total_loss.item(), images.size(0))
         accuracies.update(accuracy[0], images.size(0))
-
-        if is_training:
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -212,7 +214,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args):
+def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training):
     loss_mask = (targets.sum(2) > 0).unsqueeze(2).float()
 
     # burnin phase
@@ -235,14 +237,15 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
         total_loss += loss_tv
 
         # ONLINE LEARNING UPDATE
-        loss_tv.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+        if is_training:
+            loss_tv.backward()
+            optimizer.step()
+            optimizer.zero_grad()
 
         # for i in range(len(model)):
             # act_rate[i] += tonp(s[i].mean().data)/t_sample
 
-        # reinitialize loss_tv 
+        # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
 
     return total_loss
