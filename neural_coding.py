@@ -19,16 +19,18 @@ def phase_coding(image: np.ndarray, timesteps: int = 100, is_weighted: bool = Tr
 
     # binary representation of the image (it makes 8 )
     bit_representation = np.unpackbits(
-        image[..., None], axis=-1).transpose(2, 0, 1)
+        image[..., None], axis=-1).transpose(2, 0, 1).astype(np.float32)
 
     # IF the weighted input option is used
     if is_weighted:
         # obtained with the equation seen in the referenced paper
-        w_s = [0.5, 0.25, 0.125, 0.0625, 0.0313, 0.015625, 0.0078125, 0.00390625]
-        # TODO
+        w_s = [0.5, 0.25, 0.125, 0.0625, 0.0313,
+               0.015625, 0.0078125, 0.00390625]
+        for i, weight in enumerate(w_s):
+            bit_representation[i, :, :] = bit_representation[i, :, :] * weight
 
     # Repeat the bit representation to create the final output spikes
-    S = np.tile(bit_representation, periods)
+    S = np.tile(bit_representation, (periods, 1, 1))
 
     return S
 
@@ -81,25 +83,16 @@ def ttfs(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, timesteps
 if __name__ == '__main__':
     theta_0 = 1.0
     tau_th = 6.0
-    ts = 100
+    ts = 80
 
     image = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
-    print(image.shape)
-
-    a = np.tile(image[..., None], 3)
-    print(a.shape)
-
-    exit()
-    S = ttfs(image, theta_0, tau_th, ts)
+    
+    S = phase_coding(image, ts, is_weighted=True)
     print(S.shape, np.unique(S))
     spikes = (S == 1.).sum()
     nonspikes = (S == 0.).sum()
 
     print(spikes, nonspikes)
-
-    print(333 * 500 * 100 == spikes + nonspikes)
-
-    print(333 * 500, spikes, abs(333 * 500 - spikes))
 
     print('Spikes !!!!!')
     for t in range(ts):
