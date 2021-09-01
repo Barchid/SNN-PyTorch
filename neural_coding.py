@@ -4,11 +4,39 @@ import cv2
 import matplotlib.pyplot as plt
 
 
+def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int = 2):
+    # asserts
+    assert len(image.shape) == 2  # force grayscale
+
+    # normalization between [0, 1]
+    image = image.astype(np.float32) / np.amax(image)
+
+    # Compute N_s (the number of spikes per pixel)
+    N_s = np.ceil(N_max * image)
+
+    # Compute ISI (the InterSpike Interval per pixel)
+    ISI = np.full_like(image, float(N_max))
+    ISI[N_s > 1.] = np.ceil(-(T_max - T_min) * image + T_max)
+
+    
+
+
 def rate_coding(image: np.ndarray):
     pass
 
 
 def phase_coding(image: np.ndarray, timesteps: int = 100, is_weighted: bool = True):
+    """Function that converts a grayscale image into spiketrains following the phase neural coding
+    presented in TODO
+
+    Args:
+        image (np.ndarray): the grayscale image to convert of dimension (H, W)
+        timesteps (int, optional): the number of timesteps. Must be a multiple of 8 (required for the phases). Defaults to 100.
+        is_weighted (bool, optional): Flag that indicates whether the output spikes are weighted following the w_s parameter defined in the original paper. Defaults to True.
+
+    Returns:
+        np.ndarray: the spike tensor of dimension (T, H, W)
+    """
     # asserts
     assert len(image.shape) == 2  # force grayscale
     # check the conversion is possible. 8 because this will be the number of phases for the bit representation of [0, 255]
@@ -59,11 +87,8 @@ def ttfs(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, timesteps
     assert tau_th > 0.
     assert timesteps > 0
 
-    # convert numpy array to float
-    image = image.astype(np.float32)
-
     # Divide by max value of the image
-    image = image / np.amax(image)
+    image = image.astype(np.float32) / np.amax(image)
 
     # output spikes
     S = np.zeros((timesteps, image.shape[0], image.shape[1]), dtype=np.float32)
@@ -86,9 +111,11 @@ if __name__ == '__main__':
     ts = 80
 
     image = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
-    
-    S = phase_coding(image, ts, is_weighted=True)
+    S = ttfs(image, theta_0, tau_th, ts)
     print(S.shape, np.unique(S))
+    exit()
+    S = phase_coding(image, ts, is_weighted=True)
+    print(S.shape, )
     spikes = (S == 1.).sum()
     nonspikes = (S == 0.).sum()
 
