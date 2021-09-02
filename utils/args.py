@@ -50,4 +50,7 @@ def get_args():
                         help="Delta T.")
     parser.add_argument('--burnin', type=int, default=50,
                         help="Number of steps at the beginning of the forward pass where no learning rule is applied. It is used to put some activity in the SNN (default: 50).")
+
+    parser.add_argument('--mixed-precision', type=bool, action="store_true",
+                        help="Enables the Automatic Mixed Precision optimization from PyTorch.")
     return parser.parse_args()
