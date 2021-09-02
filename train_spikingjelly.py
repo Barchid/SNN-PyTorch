@@ -3,13 +3,15 @@ import os
 import random
 import shutil
 import time
+
+from spikingjelly.datasets.dvs128_gesture import DVS128Gesture
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args import get_args
 import warnings
 
 import torch
 import torch.nn as nn
-import torch.nn.parallel
+import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
@@ -18,6 +20,7 @@ import torchvision.datasets as datasets
 from torch.cuda import amp
 from torchsummary import summary
 
+from spikingjelly.clock_driven import functional
 
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -79,33 +82,19 @@ def main():
     cudnn.benchmark = True
 
     # TODO: dataloaders code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ]))
+    train_dataset = DVS128Gesture(
+        args.data, train=True, data_type='frame', split_by='number', frames_number=args.timesteps)
+    val_dataset = DVS128Gesture(args.data, train=False,
+                                data_type='frame', split_by='number', frames_number=args.timesteps)
 
     must_shuffle = False if args.debug else True
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=must_shuffle, num_workers=args.workers, pin_memory=True)
+        train_dataset, batch_size=args.batch_size, shuffle=must_shuffle, num_workers=args.workers, pin_memory=True, drop_last=True
+    )
 
     val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True, drop_last=True
+    )
 
     # If only evaluating the model is required
     if args.evaluate:
@@ -124,7 +113,7 @@ def main():
 
     # TRAINING + VALIDATION LOOP
     for epoch in range(args.start_epoch, args.epochs):
-        adjust_learning_rate(optimizer, epoch, args)
+        # adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
         acc, loss = one_epoch(train_loader, model, criterion,
@@ -177,21 +166,21 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure data loading time
         data_time.update(time.time() - end)
 
-        images = images.to(device)
+        images = images.float().to(device)
         target = target.to(device)
+        target_onehot = F.one_hot(target, 11)
 
         # compute output
         if scaler is None:  # full precision
             output = model(images)
-            loss = criterion(output, target)
+            loss = criterion(output, target_onehot)
         else:  # automatic mixed precision
             with amp.autocast():
                 output = model(images)
-                loss = criterion(output, target)
+                loss = criterion(output, target_onehot)
 
         # measure accuracy and record loss
-        # TODO: define accuracy metrics
-        accuracy = torch.Tensor(1.1)  # TODO: here
+        accuracy = (output.argmax(dim=1) == target).float().sum().item()
         losses.update(loss.item(), images.size(0))
         accuracies.update(accuracy[0], images.size(0))
 
@@ -209,6 +198,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
+
+        # reset the network's activities
+        functional.reset_net(model)
 
         if i % args.print_freq == 0:
             progress.display(i)
@@ -230,13 +222,6 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
-
-
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
 
 
 if __name__ == '__main__':
