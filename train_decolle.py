@@ -2,7 +2,7 @@ import argparse
 from utils.misc import tonp
 from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
 from snn.base import DECOLLEBase, DECOLLELoss
-from models.nmnist_cnn import LenetDECOLLE
+from models.decolle_cnn import LenetDECOLLE
 import os
 import random
 import shutil
