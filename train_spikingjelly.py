@@ -1,4 +1,7 @@
 import argparse
+
+from torch.cuda.amp.grad_scaler import GradScaler
+from models.spikingjelly_cnn import SpikingJellyNet
 import os
 import random
 import shutil
@@ -25,11 +28,11 @@ from spikingjelly.clock_driven import functional
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-# TODO: best accuracy metrics (used to save the best checkpoints)
-best_acc = 0.
-
 
 def main():
+    # TODO: best accuracy metrics (used to save the best checkpoints)
+    best_acc = 0.
+
     args = get_args()
 
     if args.seed is not None:
@@ -47,10 +50,10 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = None
+    model = SpikingJellyNet(128)
 
     # TODO: define loss function
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = F.mse_loss
 
     # TODO: define optimizer
     optimizer = torch.optim.SGD(
@@ -130,20 +133,19 @@ def main():
 
         save_checkpoint({
             'epoch': epoch + 1,
-            'arch': args.arch,
             'state_dict': model.state_dict(),
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
-        }, is_best, filename=f'{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
+        }, is_best, filename=f'experiments/{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
 
 
-def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, scaler=None, optimizer=None):
+def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, scaler: GradScaler=None, optimizer=None):
     """One epoch pass. If the optimizer is not None, the function works in training mode. 
     """
     # TODO: define AverageMeters (print some metrics at the end of the epoch)
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
+    losses = AverageMeter('Loss', ':6.3f')
     accuracies = AverageMeter('Accuracy', ':6.2f')
 
     is_training = optimizer is not None
@@ -168,7 +170,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         images = images.float().to(device)
         target = target.to(device)
-        target_onehot = F.one_hot(target, 11)
+        target_onehot = F.one_hot(target, 11).float()
 
         # compute output
         if scaler is None:  # full precision
@@ -179,13 +181,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
                 output = model(images)
                 loss = criterion(output, target_onehot)
 
-        # measure accuracy and record loss
-        accuracy = (output.argmax(dim=1) == target).float().sum().item()
-        losses.update(loss.item(), images.size(0))
-        accuracies.update(accuracy[0], images.size(0))
-
         # compute gradient and do SGD step (if training)
         if is_training:
+            print('training plezaaaaaase')
             optimizer.zero_grad()
             if scaler is None:  # full precision
                 loss.backward()
@@ -194,6 +192,11 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
                 scaler.update()
+
+        # measure accuracy and record loss
+        accuracy = (output.argmax(dim=1) == target).float().sum().item()
+        losses.update(loss.item(), images.size(0))
+        accuracies.update(accuracy, images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -213,9 +216,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         if is_training:
             tensorboard_meter.update_train([accuracies, losses])
         else:
-            tensorboard_meter.update_val([accuracies, losses])
+            tensorboard_meter.update_val([accuracies, losses], epoch)
 
-        return accuracies.avg, losses.avg  # TODO
+    return accuracies.avg, losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
