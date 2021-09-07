@@ -50,7 +50,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = SpikingJellyNet(128)
+    model = SpikingJellyNet(128).to(device)
 
     # TODO: define loss function
     criterion = F.mse_loss
