@@ -183,7 +183,6 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # compute gradient and do SGD step (if training)
         if is_training:
-            print('training plezaaaaaase')
             optimizer.zero_grad()
             if scaler is None:  # full precision
                 loss.backward()
