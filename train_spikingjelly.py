@@ -196,7 +196,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure accuracy and record loss
         print(output.argmax(dim=1), '\n\n')
         print(target)
-        accuracy = (output.argmax(dim=1) == target).float().sum().item()
+        accuracy = (output.argmax(dim=1) == target).float().sum().item() / output.shape[0]
         losses.update(loss.item(), images.size(0))
         accuracies.update(accuracy, images.size(0))
 
