@@ -53,7 +53,7 @@ def main():
     model = SpikingJellyNet(128).to(device)
 
     # TODO: define loss function
-    criterion = F.mse_loss
+    criterion = nn.MSELoss()
 
     # TODO: define optimizer
     optimizer = torch.optim.SGD(
@@ -139,7 +139,7 @@ def main():
         }, is_best, filename=f'experiments/{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
 
 
-def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, scaler: GradScaler=None, optimizer=None):
+def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, scaler: GradScaler = None, optimizer=None):
     """One epoch pass. If the optimizer is not None, the function works in training mode. 
     """
     # TODO: define AverageMeters (print some metrics at the end of the epoch)
