@@ -56,12 +56,13 @@ def main():
     criterion = nn.MSELoss()
 
     # TODO: define optimizer
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        args.lr,
-        momentum=args.momentum,
-        # weight_decay=args.weight_decay
-    )
+    # optimizer = torch.optim.SGD(
+    #     model.parameters(),
+    #     args.lr,
+    #     momentum=args.momentum,
+    #     # weight_decay=args.weight_decay
+    # )
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # TODO: define input_size here to have the right summary of your model
     if args.summary:
