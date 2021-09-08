@@ -60,7 +60,7 @@ def main():
         model.parameters(),
         args.lr,
         momentum=args.momentum,
-        weight_decay=args.weight_decay
+        # weight_decay=args.weight_decay
     )
 
     # TODO: define input_size here to have the right summary of your model
@@ -187,7 +187,6 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
             if scaler is None:  # full precision
                 loss.backward()
                 optimizer.step()
-                print('????')
             else:  # automatic mixed precision
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
