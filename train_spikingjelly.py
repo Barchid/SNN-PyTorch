@@ -176,6 +176,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         if scaler is None:  # full precision
             output = model(images)
             loss = criterion(output, target_onehot)
+            print(loss)
         else:  # automatic mixed precision
             with amp.autocast():
                 output = model(images)
