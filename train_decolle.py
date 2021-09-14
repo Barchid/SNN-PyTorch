@@ -1,5 +1,5 @@
 import argparse
-from utils.misc import cross_entropy_one_hot, tonp
+from utils.misc import cross_entropy_one_hot, onehot_np, tonp
 from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
 from snn.base import DECOLLEBase, DECOLLELoss
 from models.decolle_cnn import LenetDECOLLE
@@ -10,6 +10,8 @@ import time
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args import get_args
 import warnings
+
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -156,7 +158,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
-    accuracies = AverageMeter('Accuracy', ':6.2f')
+    accuracies = [AverageMeter(
+        f'Accuracy of layer {i}', ':6.2f') for i in range(len(model))]
 
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
@@ -164,7 +167,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     # final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
         len(dataloader),
-        [batch_time, data_time, losses, accuracies],
+        [batch_time, data_time, losses, *accuracies],
         prefix=f"{prefix} - Epoch: [{epoch}]")
 
     # switch to train mode (if training)
@@ -182,14 +185,13 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         targets = targets.to(device)
 
         # compute output
-        total_loss = snn_inference(
+        total_loss, layers_acc = snn_inference(
             images, targets, model, criterion, optimizer, args, is_training)
 
         # measure accuracy and record loss
-        # TODO: define accuracy metrics
-        accuracy = torch.Tensor(1.1)  # TODO: here
         losses.update(total_loss.item(), images.size(0))
-        accuracies.update(accuracy[0], images.size(0))
+        for i, accuracy in enumerate(accuracies):
+            accuracy.update(layers_acc, images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -230,6 +232,12 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
     # total loss for the whole inference process
     total_loss = torch.tensor(0.).to(device)
 
+    batch_size = images.shape[0]
+    nclasses = targets.shape[2]
+
+    # cumulates the predictions for each timesteps
+    r_cum = np.zeros((len(model), batch_size, nclasses))
+
     # FOR EACH TIMESTEPS
     for k in (range(args.burnin, t_sample)):
         s, r, u = model(images[:, k, :, :])
@@ -245,13 +253,26 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
             optimizer.step()
             optimizer.zero_grad()
 
+        # update the cumulator of predictions
+        r_np = tonp(r)
+        r_np = onehot_np(r_np.argmax(-1))  # one-hot encoded prediction
+        r_cum += r_np
+        for n in range(len(model)):
+            r_cum[n, :, :] += r_np[n]
+
         # for i in range(len(model)):
             # act_rate[i] += tonp(s[i].mean().data)/t_sample
 
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
 
-    return total_loss
+    # Compute the accuracy for each layer
+    r_cum = r_cum.argmax(-1)  # shape = (Layer, Batch)
+    targ = np.tile(tonp(targets[:, 0, :]).argmax(-1), (len(model), 1))
+    # 1D tensor of length (Layer) with accuracy measure for each layer
+    layers_acc = np.sum((r_cum == targ), axis=1) / batch_size
+
+    return total_loss, layers_acc
 
 
 if __name__ == '__main__':
