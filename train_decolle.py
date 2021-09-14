@@ -1,5 +1,5 @@
 import argparse
-from utils.misc import tonp
+from utils.misc import cross_entropy_one_hot, tonp
 from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
 from snn.base import DECOLLEBase, DECOLLELoss
 from models.decolle_cnn import LenetDECOLLE
@@ -24,11 +24,11 @@ from torchsummary import summary
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-# TODO: best accuracy metrics (used to save the best checkpoints)
-best_acc = 0.
-
 
 def main():
+    # TODO: best accuracy metrics (used to save the best checkpoints)
+    best_acc = 0.
+
     args = get_args()
 
     if args.seed is not None:
@@ -61,8 +61,11 @@ def main():
     )
 
     # define loss function
-    criterion = DECOLLELoss(
-        net=model, loss_fn=[nn.SmoothL1Loss() for _ in range(len(model))])
+    loss_fn = [nn.SmoothL1Loss() for _ in range(len(model))]
+    if model.with_output_layer:
+        loss_fn[-1] = cross_entropy_one_hot
+
+    criterion = DECOLLELoss(net=model, loss_fn=loss_fn)
 
     # define optimizer
     optimizer = torch.optim.Adamax(
