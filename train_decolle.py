@@ -61,6 +61,7 @@ def main():
         num_mlp_layers=0,
         deltat=1000
     )
+    model.to(device)
 
     # define loss function
     loss_fn = [nn.SmoothL1Loss() for _ in range(len(model))]
