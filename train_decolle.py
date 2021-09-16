@@ -132,13 +132,14 @@ def main():
 
         # train for one epoch
         accs, loss = one_epoch(train_loader, model, criterion,
-                              epoch, args, tensorboard_meter, optimizer=optimizer)
+                               epoch, args, tensorboard_meter, optimizer=optimizer)
 
         # evaluate on validation set (optimizer is None when validation)
-        accs, loss = one_epoch(val_loader, model, criterion,
-                              epoch, args, tensorboard_meter, optimizer=None)
+        if not args.debug:
+            accs, loss = one_epoch(
+                val_loader, model, criterion, epoch, args, tensorboard_meter, optimizer=None)
 
-        acc = accs[-1] # accuracy of last layer
+        acc = accs[-1]  # accuracy of last layer
 
         # remember best accuracy and save checkpoint
         is_best = acc > best_acc
@@ -258,7 +259,8 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
 
         # update the cumulator of predictions
         r_np = np.array(tonp(r))
-        r_np = onehot_np(r_np.argmax(-1), n_classes=10)  # one-hot encoded prediction TODO
+        # one-hot encoded prediction TODO
+        r_np = onehot_np(r_np.argmax(-1), n_classes=10)
         r_cum += r_np
         for n in range(len(model)):
             r_cum[n, :, :] += r_np[n]
