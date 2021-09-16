@@ -193,14 +193,14 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
-        for i, accuracy in enumerate(accuracies):
-            accuracy.update(layers_acc[i], images.size(0))
+        for j, accuracy in enumerate(accuracies):
+            accuracy.update(layers_acc[j], images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
+        if i % args.print_freq == 0 or args.debug:
             progress.display(i)
 
         # if debugging, stop after the first batch
