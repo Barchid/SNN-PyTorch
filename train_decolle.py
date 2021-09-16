@@ -131,12 +131,14 @@ def main():
     for epoch in range(args.start_epoch, args.epochs):
 
         # train for one epoch
-        acc, loss = one_epoch(train_loader, model, criterion,
+        accs, loss = one_epoch(train_loader, model, criterion,
                               epoch, args, tensorboard_meter, optimizer=optimizer)
 
         # evaluate on validation set (optimizer is None when validation)
-        acc, loss = one_epoch(val_loader, model, criterion,
+        accs, loss = one_epoch(val_loader, model, criterion,
                               epoch, args, tensorboard_meter, optimizer=None)
+
+        acc = accs[-1] # accuracy of last layer
 
         # remember best accuracy and save checkpoint
         is_best = acc > best_acc
@@ -211,7 +213,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         else:
             tensorboard_meter.update_val([accuracies, losses])
 
-    return accuracies.avg, losses.avg  # TODO
+    return [accuracy.avg for accuracy in accuracies], losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
