@@ -16,9 +16,8 @@ def tonp(tensor):
         return tensor.detach().cpu().numpy()
 
 
-def onehot_np(tensor: np.ndarray):
-    n_values = np.max(tensor) + 1
-    return np.eye(n_values)[tensor]
+def onehot_np(tensor: np.ndarray, n_classes: int):
+    return np.eye(n_classes)[tensor]
 
 
 def cross_entropy_one_hot(input, target):
