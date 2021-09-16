@@ -210,9 +210,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # TODO: define AverageMeters used in tensorboard summary
         if is_training:
-            tensorboard_meter.update_train([accuracies, losses])
+            tensorboard_meter.update_train([*accuracies, losses])
         else:
-            tensorboard_meter.update_val([accuracies, losses])
+            tensorboard_meter.update_val([*accuracies, losses])
 
     return [accuracy.avg for accuracy in accuracies], losses.avg  # TODO
 
