@@ -139,7 +139,6 @@ def main():
                               epoch, args, tensorboard_meter, optimizer=None)
 
         acc = accs[-1] # accuracy of last layer
-        print(acc)
 
         # remember best accuracy and save checkpoint
         is_best = acc > best_acc
@@ -195,7 +194,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
         for i, accuracy in enumerate(accuracies):
-            accuracy.update(layers_acc, images.size(0))
+            accuracy.update(layers_acc[i], images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
