@@ -257,6 +257,8 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
         # update the cumulator of predictions
         r_np = np.array(tonp(r))
         r_np = onehot_np(r_np.argmax(-1))  # one-hot encoded prediction
+        print('r_np', r_np.shape)
+        print('r_cum', r_cum.shape)
         r_cum += r_np
         for n in range(len(model)):
             r_cum[n, :, :] += r_np[n]
