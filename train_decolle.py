@@ -139,6 +139,7 @@ def main():
                               epoch, args, tensorboard_meter, optimizer=None)
 
         acc = accs[-1] # accuracy of last layer
+        print(acc)
 
         # remember best accuracy and save checkpoint
         is_best = acc > best_acc
