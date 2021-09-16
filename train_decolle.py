@@ -211,7 +211,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         else:
             tensorboard_meter.update_val([accuracies, losses])
 
-        return accuracies.avg, losses.avg  # TODO
+    return accuracies.avg, losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
