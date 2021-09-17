@@ -10,17 +10,16 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-# import albumentations as A
-# import albumentations.augmentations.functional as F
-# from albumentations.pytorch import ToTensorV2
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 from tqdm import tqdm
 import torch.backends.cudnn as cudnn
 from torch.utils.data import Dataset, DataLoader
 
 cudnn.benchmark = True
-TRAIN_COUNT = 6000 #10000
-VAL_COUNT = 1300 #2091
+TRAIN_COUNT = 6000  # 10000
+VAL_COUNT = 1300  # 2091
 
 # get the class from the name of image files
 class_dic = {
@@ -142,7 +141,7 @@ def init_oxford_dataset(dataset_directory):
 
     train_images_filenames = correct_images_filenames[:TRAIN_COUNT]
     val_images_filenames = correct_images_filenames[
-        TRAIN_COUNT : (TRAIN_COUNT + VAL_COUNT)
+        TRAIN_COUNT: (TRAIN_COUNT + VAL_COUNT)
     ]
     return (
         train_images_filenames,
@@ -163,10 +162,13 @@ def preprocess_mask(mask):
     mask[(mask == 1.0) | (mask == 3.0)] = 1.0
     return mask
 
+
 def DOG_transform(image, sigma1=1.0, sigma2=3.0, kernel_size=5):
-    g1 = cv2.GaussianBlur(image, (kernel_size,kernel_size), sigmaX=sigma1,sigmaY=sigma1)
-    g2 = cv2.GaussianBlur(image, (kernel_size,kernel_size), sigmaX=sigma2,sigmaY=sigma2)
-    
+    g1 = cv2.GaussianBlur(image, (kernel_size, kernel_size),
+                          sigmaX=sigma1, sigmaY=sigma1)
+    g2 = cv2.GaussianBlur(image, (kernel_size, kernel_size),
+                          sigmaX=sigma2, sigmaY=sigma2)
+
     DOG = g2 - g1
     # cv2.imshow('coucou', DOG)
     # cv2.waitKey(0)
@@ -175,12 +177,40 @@ def DOG_transform(image, sigma1=1.0, sigma2=3.0, kernel_size=5):
     # DOG[DOG<=0]=0
     # DOG = DOG.astype(np.uint8)
     # print(DOG.dtype)
-    return DOG 
+    return DOG
 
+
+def get_transforms(height, width, is_training=False, is_grayscale=True):
+    if is_training:
+        return A.Compose(
+            [
+                A.Resize(height, width),
+                A.HorizontalFlip(p=0.5),
+                A.RandomBrightnessContrast(p=0.2),
+                A.Normalize(
+                    mean=(0.5) if is_grayscale else (0.485, 0.456, 0.406),
+                    std=(0.5) if is_grayscale else (0.229, 0.224, 0.225),
+                ),
+                ToTensorV2(),
+            ]
+        )
+    else:
+        return A.Compose(
+            [
+                A.Resize(height, width),
+                A.Normalize(
+                    mean=(0.5) if is_grayscale else (0.485, 0.456, 0.406),
+                    std=(0.5) if is_grayscale else (0.229, 0.224, 0.225),
+                ),
+                ToTensorV2(),
+            ]
+        )
 
 ################################################################################################################
 # Oxfor dataset
 ################################################################################################################
+
+
 class OxfordPetDataset(Dataset):
     def __init__(
         self, images_filenames, images_directory, masks_directory, transform=None, use_DOG=False
@@ -206,7 +236,8 @@ class OxfordPetDataset(Dataset):
         class_id = get_class_from_filename(image_filename)
 
         mask = cv2.imread(
-            os.path.join(self.masks_directory, image_filename.replace(".jpg", ".png")),
+            os.path.join(self.masks_directory,
+                         image_filename.replace(".jpg", ".png")),
             cv2.IMREAD_UNCHANGED,
         )
         mask = preprocess_mask(mask)
@@ -259,7 +290,7 @@ class OxfordPetDatasetLocalization(Dataset):
         image_filename = self.images_filenames[idx]
         image = cv2.imread(os.path.join(self.images_directory, image_filename))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
+
         if self.use_DOG:
             image = DOG_transform(image)
 
@@ -267,12 +298,13 @@ class OxfordPetDatasetLocalization(Dataset):
         class_id = get_class_from_filename(image_filename)
 
         mask = cv2.imread(
-            os.path.join(self.masks_directory, image_filename.replace(".jpg", ".png")),
+            os.path.join(self.masks_directory,
+                         image_filename.replace(".jpg", ".png")),
             cv2.IMREAD_UNCHANGED,
         )
 
         mask = preprocess_mask(mask)
-        
+
         if self.transform is not None:
             transformed = self.transform(image=image, mask=mask)
             image = transformed["image"]
@@ -296,7 +328,6 @@ def get_bbox_from_mask(mask):
     y_max = np.float(np.max(rows))
     x_max = np.float(np.max(cols))
 
-
     # normalize in interval [0, 1]
     x_min = x_min / mask.shape[1]
     y_min = y_min / mask.shape[0]
@@ -318,7 +349,8 @@ def get_class_from_filename(filename):
 def visualize_augmentations(dataset, idx=0, samples=5):
     dataset = copy.deepcopy(dataset)
     dataset.transform = A.Compose(
-        [t for t in dataset.transform if not isinstance(t, (A.Normalize, ToTensorV2))]
+        [t for t in dataset.transform if not isinstance(
+            t, (A.Normalize, ToTensorV2))]
     )
     figure, ax = plt.subplots(nrows=samples, ncols=2, figsize=(10, 24))
     for i in range(samples):
@@ -331,6 +363,7 @@ def visualize_augmentations(dataset, idx=0, samples=5):
         ax[i, 1].set_axis_off()
     plt.tight_layout()
     plt.show()
+
 
 if __name__ == "__main__":
     im = cv2.imread('dumas.PNG', cv2.IMREAD_GRAYSCALE)

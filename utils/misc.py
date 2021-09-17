@@ -42,3 +42,4 @@ def accuracy(outputs, targets, one_hot=True):
         targets = tonp(targets)
 
     return [np.mean(o == targets) for o in outputs]
+
