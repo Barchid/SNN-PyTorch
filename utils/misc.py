@@ -1,10 +1,12 @@
 from collections import Counter
 import os
+from utils.localization_utils import iou_metric
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def tonp(tensor):
@@ -43,3 +45,24 @@ def accuracy(outputs, targets, one_hot=True):
 
     return [np.mean(o == targets) for o in outputs]
 
+
+def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_file="prediction_errors.json"):
+    """Saves a chart of the prediction errors r_cum compared to the bbox ground truth
+
+    Args:
+        r_cum (np.ndarray): list of the predictions for each timesteps. Shape=(Layer, Timesteps, 4)
+        bbox (np.ndarray): the ground truth bounding box. Shape=(4)
+        result_file (str, optional): the filename of the image that will be saved. Defaults to "prediction_errors.png".
+    """
+    timesteps = preds.shape[1]
+    ious = []
+    for _ in range(timesteps):
+        iou = iou_metric(preds, bbox, bbox.shape[0], args.height, args.width)
+        ious.append(iou)
+
+    plt.plot(range(args.burnin, args.timesteps),ious, marker='o')
+    plt.title('IoU of prediction per timesteps')
+    plt.xlabel('Timesteps')
+    plt.ylabel('IoUs of predictions')
+    plt.grid(True)
+    plt.show()

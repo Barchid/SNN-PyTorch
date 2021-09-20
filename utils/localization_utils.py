@@ -6,7 +6,7 @@ import argparse
 from . import oxford_iiit_pet_loader as IIT
 import os
 import numpy as np
-from decolle.snn_utils import spiketrains
+from snn_utils import spiketrains
 import matplotlib.pyplot as plt
 import cv2
 

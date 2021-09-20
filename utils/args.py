@@ -56,5 +56,5 @@ def get_args():
 
 
     # SNN coding of static image
-    parser.add_argument('--neural-coding', type=str, choices=['rate', 'latency', 'phase', 'burst'], default='rate')
+    parser.add_argument('--neural-coding', type=str, choices=['rate', 'ttfs', 'phase', 'burst'], default='rate')
     return parser.parse_args()

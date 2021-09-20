@@ -1,7 +1,9 @@
 import math
+from utils.localization_utils import image_to_spikes
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from utils.snn_utils import image2spiketrain
 
 
 def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int = 2):
@@ -18,11 +20,9 @@ def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int
     ISI = np.full_like(image, float(N_max))
     ISI[N_s > 1.] = np.ceil(-(T_max - T_min) * image + T_max)
 
-    
 
-
-def rate_coding(image: np.ndarray):
-    pass
+def rate_coding(image: np.ndarray, timesteps: int = 100):
+    return image_to_spikes(image, max_duration=timesteps, input_shape=image.shape[1:])
 
 
 def phase_coding(image: np.ndarray, timesteps: int = 100, is_weighted: bool = True):

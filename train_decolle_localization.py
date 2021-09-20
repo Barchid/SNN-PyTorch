@@ -1,9 +1,11 @@
 import argparse
 from typing import Tuple
+from utils.neural_coding import rate_coding
+from utils.localization_utils import image_to_spikes, iou_metric
 from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_transforms, init_oxford_dataset
 
 from torch.utils.data.dataloader import DataLoader
-from utils.misc import cross_entropy_one_hot, onehot_np, tonp
+from utils.misc import cross_entropy_one_hot, onehot_np, save_prediction_errors, tonp
 from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
 from snn.base import DECOLLEBase, DECOLLELoss
 from models.decolle_cnn import LenetDECOLLE
@@ -188,18 +190,20 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         model.eval()
 
     end = time.time()
-    for i, (images, targets) in enumerate(dataloader):
+    for i, (images, class_id, bbox) in enumerate(dataloader):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        images = images.to(device)
-        targets = targets.to(device)
+        images = rate_coding(images, args.timesteps)
+        class_id = onehot_np(class_id, n_classes=2)
 
-        
+        images = images.to(device)
+        class_id = class_id.to(device)
+        bbox = bbox.to(device)
 
         # compute output
         total_loss, layers_acc = snn_inference(
-            images, targets, model, criterion, optimizer, args, is_training)
+            images, bbox, model, criterion, optimizer, args, is_training)
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
@@ -232,9 +236,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training):
-    loss_mask = (targets.sum(2) > 0).unsqueeze(2).float()
-
+def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training, batch_number=0):
     # burnin phase
     model.init(images, args.burnin)
     t_sample = images.shape[1]
@@ -246,16 +248,15 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
     total_loss = torch.tensor(0.).to(device)
 
     batch_size = images.shape[0]
-    nclasses = targets.shape[2]
 
-    # cumulates the predictions for each timesteps
-    r_cum = np.zeros((len(model), batch_size, nclasses))
+    # cumulates the predictions for each timestep
+    r_cum = np.zeros((len(model), batch_size, args.timesteps - args.burnin, 4))
 
-    # FOR EACH TIMESTEPS
+    # FOR EACH TIMESTEP
     for k in (range(args.burnin, t_sample)):
         s, r, u = model(images[:, k, :, :])
         loss_ = criterion(
-            s, r, u, target=targets[:, k, :], mask=loss_mask[:, k, :], sum_=False)
+            s, r, u, target=bbox,  sum_=False)
 
         loss_tv += sum(loss_)
         total_loss += loss_tv
@@ -268,25 +269,25 @@ def snn_inference(images, targets, model: DECOLLEBase, criterion: DECOLLELoss, o
 
         # update the cumulator of predictions
         r_np = np.array(tonp(r))
-        # one-hot encoded prediction TODO
-        r_np = onehot_np(r_np.argmax(-1), n_classes=10)
-        r_cum += r_np
-        for n in range(len(model)):
-            r_cum[n, :, :] += r_np[n]
+        r_cum[:, :, k - args.burnin, :] += r_np
 
         # for i in range(len(model)):
-            # act_rate[i] += tonp(s[i].mean().data)/t_sample
+        # act_rate[i] += tonp(s[i].mean().data)/t_sample
 
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
 
-    # Compute the accuracy for each layer
-    r_cum = r_cum.argmax(-1)  # shape = (Layer, Batch)
-    targ = np.tile(tonp(targets[:, 0, :]).argmax(-1), (len(model), 1))
-    # 1D tensor of length (Layer) with accuracy measure for each layer
-    layers_acc = np.sum((r_cum == targ), axis=1) / batch_size
+    # Compute the IoU for each layer
+    layers_iou = []
+    for i in range(len(model)):
+        layers_iou.append(iou_metric(
+            r_np[i], bbox, batch_size, args.height, args.width))  # last prediction
 
-    return total_loss, layers_acc
+        if batch_number == args.save_preds:
+            save_prediction_errors(
+                r_cum[i, :, :, :], bbox, result_file=f'result_preds_layer{i}.png')
+
+    return total_loss, layers_iou
 
 
 def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
