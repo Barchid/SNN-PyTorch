@@ -227,7 +227,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training, batch_number=0):
     # burnin phase
     model.init(images.transpose(0, 1), args.burnin)
-    t_sample = images.shape[1]
+    t_sample = images.shape[0]
 
     # per-layer losses for the whole batch
     loss_tv = torch.tensor(0.).to(device)
@@ -239,11 +239,10 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
     # cumulates the predictions for each timestep
     r_cum = np.zeros((len(model), batch_size, args.timesteps - args.burnin, 4))
-    r_np = None
 
     # FOR EACH TIMESTEP
     for k in (range(args.burnin, t_sample)):
-        s, r, u = model(images[:, k, :, :])
+        s, r, u = model(images[k, :, :, :])
         loss_ = criterion(
             s, r, u, target=bbox,  sum_=False)
 
