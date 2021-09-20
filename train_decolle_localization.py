@@ -257,6 +257,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
         # update the cumulator of predictions
         r_np = np.array(tonp(r))
+        print(r_np[0])
         r_cum[:, :, k - args.burnin, :] += r_np
 
         # for i in range(len(model)):
