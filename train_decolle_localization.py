@@ -6,7 +6,6 @@ from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_trans
 
 from torch.utils.data.dataloader import DataLoader
 from utils.misc import cross_entropy_one_hot, onehot_np, save_prediction_errors, tonp
-from torchneuromorphic.nmnist.nmnist_dataloaders import create_dataloader
 from snn.base import DECOLLEBase, DECOLLELoss
 from models.decolle_cnn import LenetDECOLLE
 import os
@@ -54,16 +53,16 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     model = LenetDECOLLE(
-        (2, 32, 32),
-        Nhid=[64, 128, 128],
+        (1, args.height, args.width),
+        Nhid=[64, 128, 128, 128],
         Mhid=[],
-        out_channels=10,
+        out_channels=4,
         kernel_size=[7],
         stride=[1],
-        pool_size=[2, 1, 2],
+        pool_size=[2, 1, 2, 2],
         alpha=[0.97],
         beta=[0.85],
-        num_conv_layers=3,
+        num_conv_layers=4,
         num_mlp_layers=0,
         deltat=1000
     )
@@ -85,7 +84,7 @@ def main():
 
     # define input_size here to have the right summary of your model
     if args.summary:
-        summary(model, input_size=(2, 34, 34))
+        summary(model, input_size=(1, args.height, args.width))
         exit()
 
     # optionally resume from a checkpoint
@@ -106,24 +105,13 @@ def main():
 
     # dataloaders code
     print('Create data loaders')
-    # must_shuffle = False if args.debug else True
-
-    # train_loader, val_loader = create_dataloader(
-    #     root="data/nmnist/n_mnist.hdf5",
-    #     chunk_size_train=300,
-    #     chunk_size_test=300,
-    #     batch_size=args.batch_size,
-    #     dt=args.timesteps,
-    #     num_workers=args.workers,
-    #     shuffle_train=must_shuffle
-    # )
-
     train_loader, val_loader = get_dataloaders(args)
 
     # Initialize parameters
     print('Init parameters')
-    data_batch, _ = next(iter(train_loader))
-    data_batch = torch.Tensor(data_batch).to(device)
+    data_batch, _, _ = next(iter(train_loader))
+    data_batch = rate_coding(data_batch, timesteps=args.timesteps)
+    data_batch = data_batch.to(device)
     model.init_parameters(data_batch)
 
     # If only evaluating the model is required
