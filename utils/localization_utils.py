@@ -129,6 +129,7 @@ def iou_metric(preds, gts, batch_size, HEIGHT, WIDTH):
     for pred, gt in zip(preds, gts):
         pred = format_bbox(pred, HEIGHT, WIDTH)
         gt = format_bbox(gt, HEIGHT, WIDTH)
+        print(pred, gt)
         iou_sum += iou(pred, gt)
 
     return iou_sum / float(batch_size)

@@ -195,8 +195,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
-        for j, accuracy in enumerate(mious):
-            accuracy.update(layers_miou[j], images.size(0))
+        for j, miou in enumerate(mious):
+            miou.update(layers_miou[j], images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -215,7 +215,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         else:
             tensorboard_meter.update_val([*mious, losses])
 
-    return [accuracy.avg for accuracy in mious], losses.avg  # TODO
+    return [miou.avg for miou in mious], losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
@@ -265,8 +265,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
 
-    print('GT', bbox[0])
-    print('PRED', r_np[2, 0])
+    # print('GT', bbox[0])
+    # print('PRED', r_np[2, 0])
 
     # Compute the IoU for each layer
     layers_iou = []
