@@ -235,7 +235,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
     # total loss for the whole inference process
     total_loss = torch.tensor(0.).to(device)
 
-    batch_size = images.shape[0]
+    batch_size = images.shape[1]
 
     # cumulates the predictions for each timestep
     r_cum = np.zeros((len(model), batch_size, args.timesteps - args.burnin, 4))
