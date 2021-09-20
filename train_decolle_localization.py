@@ -186,8 +186,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         class_id = onehot_np(class_id, n_classes=2)
 
         images = images.to(device)
-        class_id = class_id.to(device)
-        bbox = bbox.to(device)
+        class_id = torch.Tensor(class_id).to(device)
+        bbox = torch.Tensor(bbox).to(device)
 
         # compute output
         total_loss, layers_miou = snn_inference(
