@@ -16,7 +16,7 @@ def image_to_spikes(
     gain=50,
     min_duration=None,
     max_duration=1000,
-    input_shape=(28, 28, 1),
+    input_shape=(1, 28, 28),
 ):
     """
     Transforms the input image (in params) into spike trains and the corresponding
@@ -40,9 +40,9 @@ def image_to_spikes(
     allinputs = allinputs.reshape(
         allinputs.shape[0],
         allinputs.shape[1],
-        input_shape[2],
         input_shape[0],
         input_shape[1],
+        input_shape[2],
     )
 
     return torch.FloatTensor(allinputs)
