@@ -54,6 +54,11 @@ def get_args():
     parser.add_argument('--mixed-precision', action="store_true",
                         help="Enables the Automatic Mixed Precision optimization from PyTorch.")
 
+    parser.add_argument('--height', type=int,
+                        help="Height dimension of the input", default=176)
+    parser.add_argument('--width', type=int,
+                        help="Width dimension of the input", default=240)
+
     # SNN coding of static image
     parser.add_argument('--neural-coding', type=str,
                         choices=['rate', 'ttfs', 'phase', 'burst'], default='rate')
