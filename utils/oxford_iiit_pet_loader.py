@@ -275,13 +275,14 @@ class OxfordPetDatasetCLASS(Dataset):
 
 class OxfordPetDatasetLocalization(Dataset):
     def __init__(
-        self, images_filenames, images_directory, masks_directory, transform=None, use_DOG=False
+        self, images_filenames, images_directory, masks_directory, transform=None, use_DOG=False, is_grayscale=True
     ):
         self.images_filenames = images_filenames
         self.images_directory = images_directory
         self.masks_directory = masks_directory
         self.transform = transform
         self.use_DOG = use_DOG
+        self.is_grayscale = is_grayscale
 
     def __len__(self):
         return len(self.images_filenames)
@@ -289,7 +290,11 @@ class OxfordPetDatasetLocalization(Dataset):
     def __getitem__(self, idx):
         image_filename = self.images_filenames[idx]
         image = cv2.imread(os.path.join(self.images_directory, image_filename))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if self.is_grayscale:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = np.expand_dims(image, 2)
+        else:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if self.use_DOG:
             image = DOG_transform(image)
