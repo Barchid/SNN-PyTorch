@@ -265,7 +265,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
 
-    print(r_np[0])
+    print('GT', bbox[0])
+    print('PRED', r_np[2, 0])
 
     # Compute the IoU for each layer
     layers_iou = []
