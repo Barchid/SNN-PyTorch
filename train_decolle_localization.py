@@ -239,6 +239,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
     # cumulates the predictions for each timestep
     r_cum = np.zeros((len(model), batch_size, args.timesteps - args.burnin, 4))
+    r_np = None
 
     # FOR EACH TIMESTEP
     for k in (range(args.burnin, t_sample)):
