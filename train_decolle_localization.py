@@ -54,7 +54,7 @@ def main():
 
     model = LenetDECOLLE(
         (1, args.height, args.width),
-        Nhid=[64, 128, 128, 128],
+        Nhid=[64, 128, 128, 64],
         Mhid=[],
         out_channels=4,
         kernel_size=[7],
