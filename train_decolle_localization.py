@@ -257,7 +257,6 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
         # update the cumulator of predictions
         r_np = np.array(tonp(r))
-        print(r_np[0])
         r_cum[:, :, k - args.burnin, :] += r_np
 
         # for i in range(len(model)):
@@ -265,6 +264,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
+
+    print(r_np[0])
 
     # Compute the IoU for each layer
     layers_iou = []
