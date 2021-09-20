@@ -272,11 +272,11 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
     layers_iou = []
     for i in range(len(model)):
         layers_iou.append(iou_metric(
-            r_np[i], bbox, batch_size, args.height, args.width))  # last prediction
+            r_np[i], bbox.cpu().detach().numpy(), batch_size, args.height, args.width))  # last prediction
 
         if batch_number == args.save_preds:
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox, result_file=f'result_preds_layer{i}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), result_file=f'result_preds_layer{i}.png')
 
     return total_loss, layers_iou
 

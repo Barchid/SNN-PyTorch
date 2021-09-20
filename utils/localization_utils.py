@@ -35,7 +35,8 @@ def image_to_spikes(
         st = spiketrains(T=T[i], N=Nin, rates=gain * input[i].reshape(-1)).astype(
             np.float32
         )
-        allinputs[i] = np.pad(st, ((0, max_duration - T[i]), (0, 0)), "constant")
+        allinputs[i] = np.pad(
+            st, ((0, max_duration - T[i]), (0, 0)), "constant")
     allinputs = np.transpose(allinputs, (1, 0, 2))
     allinputs = allinputs.reshape(
         allinputs.shape[0],
@@ -49,7 +50,7 @@ def image_to_spikes(
 
 
 def display_predictions(
-    images, class_gts, class_preds, bbox_gts, bbox_preds, HEIGHT, WIDTH, is_save = False, filename=None
+    images, class_gts, class_preds, bbox_gts, bbox_preds, HEIGHT, WIDTH, is_save=False, filename=None
 ):
     # from one-hot encoding to argmax encoding
     class_preds = class_preds.clone().detach().argmax(1).cpu().numpy()
@@ -64,7 +65,7 @@ def display_predictions(
     for image, class_gt, class_pred, bbox_gt, bbox_pred in zip(
         images, class_gts, class_preds, bbox_gts, bbox_preds
     ):
-        image = image[0] # get rid of useless channel
+        image = image[0]  # get rid of useless channel
         fig, (ax1, ax2) = plt.subplots(1, 2)
 
         # From [0,1] dimensions to [0,WIDTH] & [0, HEIGHT]
@@ -91,6 +92,7 @@ def display_predictions(
 
 
 def format_bbox(bbox, HEIGHT, WIDTH):
+    bbox = np.clip(bbox, 0., 1.)
     bbox[0] = int(bbox[0] * WIDTH)  # x min
     bbox[1] = int(bbox[1] * HEIGHT)  # y min
     bbox[2] = int(bbox[2] * WIDTH)  # x max
