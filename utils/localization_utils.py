@@ -1,3 +1,4 @@
+from utils.snn_utils import spiketrains
 import torch
 import albumentations as A
 import albumentations.augmentations.functional as F
@@ -6,7 +7,6 @@ import argparse
 from . import oxford_iiit_pet_loader as IIT
 import os
 import numpy as np
-from snn_utils import spiketrains
 import matplotlib.pyplot as plt
 import cv2
 
