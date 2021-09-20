@@ -171,8 +171,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
-    accuracies = [AverageMeter(
-        f'Accuracy of layer {i}', ':6.2f') for i in range(len(model))]
+    mious = [AverageMeter(
+        f'mIoU of layer {i}', ':6.2f') for i in range(len(model))]
 
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
@@ -180,7 +180,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     # final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
         len(dataloader),
-        [batch_time, data_time, losses, *accuracies],
+        [batch_time, data_time, losses, *mious],
         prefix=f"{prefix} - Epoch: [{epoch}]")
 
     # switch to train mode (if training)
@@ -202,13 +202,13 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         bbox = bbox.to(device)
 
         # compute output
-        total_loss, layers_acc = snn_inference(
-            images, bbox, model, criterion, optimizer, args, is_training)
+        total_loss, layers_miou = snn_inference(
+            images, bbox, model, criterion, optimizer, args, is_training, batch_number=i)
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
-        for j, accuracy in enumerate(accuracies):
-            accuracy.update(layers_acc[j], images.size(0))
+        for j, accuracy in enumerate(mious):
+            accuracy.update(layers_miou[j], images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -223,11 +223,11 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # TODO: define AverageMeters used in tensorboard summary
         if is_training:
-            tensorboard_meter.update_train([*accuracies, losses])
+            tensorboard_meter.update_train([*mious, losses])
         else:
-            tensorboard_meter.update_val([*accuracies, losses])
+            tensorboard_meter.update_val([*mious, losses])
 
-    return [accuracy.avg for accuracy in accuracies], losses.avg  # TODO
+    return [accuracy.avg for accuracy in mious], losses.avg  # TODO
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
