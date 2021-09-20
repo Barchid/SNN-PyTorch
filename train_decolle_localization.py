@@ -54,15 +54,15 @@ def main():
 
     model = LenetDECOLLE(
         (1, args.height, args.width),
-        Nhid=[64, 128, 128, 64],
+        Nhid=[64, 128, 128],
         Mhid=[],
         out_channels=4,
         kernel_size=[7],
         stride=[1],
-        pool_size=[2, 1, 2, 2],
+        pool_size=[2, 1, 2],
         alpha=[0.97],
         beta=[0.85],
-        num_conv_layers=4,
+        num_conv_layers=3,
         num_mlp_layers=0,
         deltat=1000
     )
