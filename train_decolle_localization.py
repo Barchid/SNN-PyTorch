@@ -226,7 +226,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 
 def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training, batch_number=0):
     # burnin phase
-    model.init(images, args.burnin)
+    model.init(images.transpose(0, 1), args.burnin)
     t_sample = images.shape[1]
 
     # per-layer losses for the whole batch
