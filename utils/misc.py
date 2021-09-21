@@ -67,3 +67,4 @@ def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_fil
     plt.ylabel('IoUs of predictions')
     plt.grid(True)
     plt.savefig(result_file)
+    plt.close()

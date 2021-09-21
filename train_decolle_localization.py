@@ -215,8 +215,6 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         else:
             tensorboard_meter.update_val([*mious, losses], epoch=epoch)
 
-        break
-
     return [miou.avg for miou in mious], losses.avg  # TODO
 
 
@@ -276,9 +274,9 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         layers_iou.append(iou_metric(
             r_np[i], bbox.cpu().detach().numpy(), batch_size, args.height, args.width))  # last prediction
 
-        if batch_number == args.save_preds:
+        if batch_number % args.save_preds == 0:
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}_batch{batch_number}.png')
 
     return total_loss, layers_iou
 
