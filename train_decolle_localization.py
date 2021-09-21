@@ -276,7 +276,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
         if batch_number == args.save_preds:
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), result_file=f'result_preds_layer{i}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}.png')
 
     return total_loss, layers_iou
 
