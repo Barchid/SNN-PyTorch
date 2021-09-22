@@ -209,11 +209,11 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         if args.debug:
             break
 
-        # TODO: define AverageMeters used in tensorboard summary
-        if is_training:
-            tensorboard_meter.update_train([*mious, losses])
-        else:
-            tensorboard_meter.update_val([*mious, losses], epoch=epoch)
+    # TODO: define AverageMeters used in tensorboard summary
+    if is_training:
+        tensorboard_meter.update_train([*mious, losses])
+    else:
+        tensorboard_meter.update_val([*mious, losses], epoch=epoch)
 
     return [miou.avg for miou in mious], losses.avg  # TODO
 

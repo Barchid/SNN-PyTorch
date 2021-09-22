@@ -61,10 +61,24 @@ def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_fil
                          bbox.shape[0], args.height, args.width)
         ious.append(iou)
 
+    losses = []
+    for t in range(timesteps):
+        loss = F.smooth_l1_loss(preds[:, t, :], bbox)
+        losses.append(loss)
+
     plt.plot(range(args.burnin, args.timesteps), ious, marker='o')
     plt.title('IoU of prediction per timesteps')
     plt.xlabel('Timesteps')
     plt.ylabel('IoUs of predictions')
+    plt.ylim([0., 1.1])
+    plt.grid(True)
+    plt.savefig(result_file)
+    plt.close()
+
+    plt.plot(range(args.burnin, args.timesteps), losses, marker='o')
+    plt.title('L1 losses of prediction per timesteps')
+    plt.xlabel('Timesteps')
+    plt.ylabel('L1 losses of predictions')
     plt.grid(True)
     plt.savefig(result_file)
     plt.close()
