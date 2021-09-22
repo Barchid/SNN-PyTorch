@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     print(data_batch.shape)
 
-    spikes = data_batch[:, 0, :, :]
+    spikes = torch.squeeze(data_batch[:, 0, :, :])
 
     #  Plot animator
     fig, ax = plt.subplots()
