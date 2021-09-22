@@ -232,6 +232,9 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
     # per-layer losses for the whole batch
     loss_tv = torch.tensor(0.).to(device)
 
+    # layers activities
+    layers_act = [0. for _ in range(len(model))]  # one entry per layer
+
     # total loss for the whole inference process
     total_loss = torch.tensor(0.).to(device)
 
@@ -259,8 +262,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         r_np = np.array(tonp(r))
         r_cum[:, :, k - args.burnin, :] += r_np
 
-        # for i in range(len(model)):
-        # act_rate[i] += tonp(s[i].mean().data)/t_sample
+        for i in range(len(model)):
+            layers_act[i] += tonp(s[i].mean().data)/t_sample
 
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
@@ -278,7 +281,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
             save_prediction_errors(
                 r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}_batch{batch_number}.png')
 
-    return total_loss, layers_iou
+    return total_loss, layers_iou, layers_act
 
 
 def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
