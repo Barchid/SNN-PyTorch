@@ -62,3 +62,5 @@ if __name__ == '__main__':
     data_batch = rate_coding(data_batch, timesteps=300)
 
     print(data_batch.shape)
+
+    spikes = data_batch[:, 0, :, :]
