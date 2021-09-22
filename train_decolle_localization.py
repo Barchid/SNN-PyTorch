@@ -161,6 +161,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     losses = AverageMeter('Loss', ':.4e')
     mious = [AverageMeter(
         f'mIoU of layer {i}', ':6.2f') for i in range(len(model))]
+    activities = [AverageMeter(
+        f'Activity rate of layer {i}', ':6.2f') for i in range(len(model))]
 
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
@@ -168,7 +170,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     # final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
         len(dataloader),
-        [batch_time, data_time, losses, *mious],
+        [batch_time, data_time, losses, *mious, *activities],
         prefix=f"{prefix} - Epoch: [{epoch}]")
 
     # switch to train mode (if training)
@@ -190,13 +192,15 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         bbox = torch.Tensor(bbox).to(device)
 
         # compute output
-        total_loss, layers_miou = snn_inference(
+        total_loss, layers_miou, layers_act = snn_inference(
             images, bbox, model, criterion, optimizer, args, is_training, batch_number=i)
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
         for j, miou in enumerate(mious):
             miou.update(layers_miou[j], images.size(0))
+        for j, activity in enumerate(activities):
+            activity.update(layers_act[j], images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -211,9 +215,10 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
     # TODO: define AverageMeters used in tensorboard summary
     if is_training:
-        tensorboard_meter.update_train([*mious, losses])
+        tensorboard_meter.update_train([*mious, *activities, losses])
     else:
-        tensorboard_meter.update_val([*mious, losses], epoch=epoch)
+        tensorboard_meter.update_val(
+            [*mious, *activities, losses], epoch=epoch)
 
     return [miou.avg for miou in mious], losses.avg  # TODO
 
