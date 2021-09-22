@@ -72,7 +72,7 @@ def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_fil
     plt.ylabel('IoUs of predictions')
     plt.ylim([0., 1.1])
     plt.grid(True)
-    plt.savefig(result_file)
+    plt.savefig(f"mIoU_{result_file}")
     plt.close()
 
     plt.plot(range(args.burnin, args.timesteps), losses, marker='o')
@@ -80,5 +80,5 @@ def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_fil
     plt.xlabel('Timesteps')
     plt.ylabel('L1 losses of predictions')
     plt.grid(True)
-    plt.savefig(result_file)
+    plt.savefig(f"l1_{result_file}")
     plt.close()
