@@ -69,13 +69,4 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     anim = splt.animator(spikes, fig, ax)
     anim.save("spike_pet_rate_anim.gif")
-    plt.close()
-
-    fig = plt.figure(facecolor="w", figsize=(10, 5))
-    ax = fig.add_subplot(111)
-    #  s: size of scatter points; c: color of scatter points
-    splt.raster(spikes, ax, s=1.5, c="black")
-    plt.title("Input Layer")
-    plt.xlabel("Time step")
-    plt.ylabel("Neuron Number")
-    plt.show()
+    # 
