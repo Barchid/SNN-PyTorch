@@ -206,9 +206,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0 and i != 0 or args.debug: # TODO debugging
+        if i % args.print_freq == 0 or args.debug:
             progress.display(i)
-            break
 
         # if debugging, stop after the first batch
         if args.debug:
