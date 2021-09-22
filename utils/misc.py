@@ -63,7 +63,7 @@ def save_prediction_errors(preds: np.ndarray, bbox: np.ndarray, args, result_fil
 
     losses = []
     for t in range(timesteps):
-        loss = F.smooth_l1_loss(preds[:, t, :], bbox)
+        loss = F.smooth_l1_loss(torch.tensor(preds[:, t, :]), torch.tensor(bbox))
         losses.append(loss)
 
     plt.plot(range(args.burnin, args.timesteps), ious, marker='o')
