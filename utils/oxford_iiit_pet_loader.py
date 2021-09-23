@@ -188,8 +188,8 @@ def get_transforms(height, width, is_training=False, is_grayscale=True):
                 A.HorizontalFlip(p=0.5),
                 A.RandomBrightnessContrast(p=0.2),
                 A.Normalize(
-                    mean=(0.5) if is_grayscale else (0.485, 0.456, 0.406),
-                    std=(0.5) if is_grayscale else (0.229, 0.224, 0.225),
+                    mean=(0.) if is_grayscale else (0.485, 0.456, 0.406),
+                    std=(1.) if is_grayscale else (0.229, 0.224, 0.225),
                 ),
                 ToTensorV2(),
             ]
@@ -199,8 +199,8 @@ def get_transforms(height, width, is_training=False, is_grayscale=True):
             [
                 A.Resize(height, width),
                 A.Normalize(
-                    mean=(0.5) if is_grayscale else (0.485, 0.456, 0.406),
-                    std=(0.5) if is_grayscale else (0.229, 0.224, 0.225),
+                    mean=(0.) if is_grayscale else (0.485, 0.456, 0.406),
+                    std=(1.) if is_grayscale else (0.229, 0.224, 0.225),
                 ),
                 ToTensorV2(),
             ]

@@ -20,6 +20,11 @@ def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int
     ISI = np.full_like(image, float(N_max))
     ISI[N_s > 1.] = np.ceil(-(T_max - T_min) * image + T_max)
 
+    S = []
+    # first timesteps are full of 0s until T_min
+    for _ in range(T_min):
+        S.append(np.zeros_like(image))
+
 
 def rate_coding(image: np.ndarray, timesteps: int = 100):
     return image_to_spikes(image, max_duration=timesteps, input_shape=image.shape[1:])

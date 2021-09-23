@@ -11,7 +11,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import cv2
+import numpy as np
 
 def get_dataloaders() -> Tuple[DataLoader, DataLoader]:
     # Initialize Oxford-IIIT-Pet dataset in data/oxford_iiit_pet directory
@@ -44,9 +45,9 @@ def get_dataloaders() -> Tuple[DataLoader, DataLoader]:
     )
 
     # Dataloaders
-    must_shuffle = False
+    must_shuffle = True
     train_loader = torch.utils.data.DataLoader(
-        train_data, batch_size=2, shuffle=must_shuffle, num_workers=0
+        train_data, batch_size=4, shuffle=must_shuffle, num_workers=0
     )
     val_loader = torch.utils.data.DataLoader(
         val_data, batch_size=2, shuffle=False, num_workers=0
@@ -59,14 +60,27 @@ if __name__ == '__main__':
     train_loader, val_loader = get_dataloaders()
 
     data_batch, _, _ = next(iter(train_loader))
+
+    imgs = torch.squeeze(data_batch).numpy()
+
     data_batch = rate_coding(data_batch, timesteps=300)
+    # batch_sum = torch.sum(data_batch, dim=0)
+    
+    # lol = torch.squeeze(batch_sum[0]).numpy()
+    # mm = np.max(lol)
+    # lol = lol/mm
+    # lol = lol * 255
+    # cv2.imwrite('debug.png', lol)
 
-    print(data_batch.shape)
+    # exit()
 
-    spikes = torch.squeeze(data_batch[:, 0, :, :])
 
-    #  Plot animator
-    fig, ax = plt.subplots()
-    anim = splt.animator(spikes, fig, ax)
-    anim.save("spike_pet_rate_anim.gif")
-    # 
+    # batch size iterations
+    for i in range(data_batch.shape[1]):
+        print(f'reading batch {i}')
+        cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
+        spikes = torch.squeeze(data_batch[:, i, :, :])
+        #  Plot animator
+        fig, ax = plt.subplots()
+        anim = splt.animator(spikes, fig, ax)
+        anim.save(f"spike_pet_rate_anim_batch{i}.gif")
