@@ -8,24 +8,30 @@ from snntorch import spikegen
 import torch
 
 
-def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int = 2):
-    # asserts
-    assert len(image.shape) == 2  # force grayscale
-
-    # normalization between [0, 1]
-    image = image.astype(np.float32) / np.amax(image)
-
+def burst_coding(images: torch.Tensor, N_max: int = 5, timesteps: int = 100, T_min: int = 2):
     # Compute N_s (the number of spikes per pixel)
-    N_s = np.ceil(N_max * image)
+    N_s = torch.ceil(N_max * images)
 
     # Compute ISI (the InterSpike Interval per pixel)
-    ISI = np.full_like(image, float(N_max))
-    ISI[N_s > 1.] = np.ceil(-(T_max - T_min) * image + T_max)
+    ISI = torch.full_like(images, float(timesteps))
 
-    S = []
+    ISI[N_s > 1.] = torch.ceil(-(timesteps - T_min)
+                               * images[N_s > 1.] + timesteps)
+
+    # Reconstruct the spikes tensor with N_s and ISI
+    S = torch.zeros(
+        (timesteps, images.shape[0], images.shape[1], images.shape[2], images.shape[3]))
     # first timesteps are full of 0s until T_min
-    for _ in range(T_min):
-        S.append(np.zeros_like(image))
+
+    distances = torch.zeros_like(ISI)  # separating two spikes for each pixels
+    for i in range(timesteps):
+        mask = torch.logical_and(distances == ISI, N_s > 0)
+        S[i] = mask.float()
+        distances += 1
+        distances[mask] = 0
+        N_s[mask] -= 1
+
+    return S
 
 
 def rate_coding(image: np.ndarray, timesteps: int = 100):
@@ -49,13 +55,10 @@ def phase_coding(images: torch.Tensor, timesteps: int = 100, is_weighted: bool =
 
     # convert to numpy because we have to
     images = (images * 255).numpy().astype(np.uint8)
-    print(images.shape)
 
     # binary representation of the image (it makes 8 )
     bit_representation = np.unpackbits(
         images[..., None], axis=-1).transpose(-1, 0, 1, 2, 3).astype(np.float32)
-
-    print(bit_representation.shape)
 
     # IF the weighted input option is used
     if is_weighted:

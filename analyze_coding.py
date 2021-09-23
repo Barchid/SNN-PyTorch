@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 from torch.utils.data.dataloader import DataLoader
-from utils.neural_coding import phase_coding, rate_coding, ttfs
+from utils.neural_coding import burst_coding, phase_coding, rate_coding, ttfs
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -70,24 +70,18 @@ if __name__ == '__main__':
     rate_batch = rate_coding(data_batch, timesteps=300)
     ttfs_batch = ttfs(data_batch, timesteps=300)
     phase_batch = phase_coding(data_batch, timesteps=300)
+    burst_batch = burst_coding(data_batch, timesteps=10)
+    
 
-    print(rate_batch.shape, ttfs_batch.shape, phase_batch.shape)
-
-    # batch_sum = torch.sum(data_batch, dim=0)
-
-    # lol = torch.squeeze(batch_sum[0]).numpy()
-    # mm = np.max(lol)
-    # lol = lol/mm
-    # lol = lol * 255
-    # cv2.imwrite('debug.png', lol)
-
+    print(rate_batch.shape, ttfs_batch.shape,
+          phase_batch.shape, burst_batch.shape)
     # exit()
 
     # batch size iterations
     for i in range(ttfs_batch.shape[1]):
         print(f'reading batch {i}')
         cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
-        spikes = torch.squeeze(phase_batch[:, i, :, :])
+        spikes = torch.squeeze(burst_batch[:, i, :, :])
         #  Plot animator
         fig, ax = plt.subplots()
         anim = splt.animator(spikes, fig, ax)
