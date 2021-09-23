@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from utils.snn_utils import image2spiketrain
+from snntorch import spikegen
+import torch
 
 
 def burst_coding(image: np.ndarray, N_max: int = 5, T_max: int = 100, T_min: int = 2):
@@ -30,29 +32,30 @@ def rate_coding(image: np.ndarray, timesteps: int = 100):
     return image_to_spikes(image, max_duration=timesteps, input_shape=image.shape[1:])
 
 
-def phase_coding(image: np.ndarray, timesteps: int = 100, is_weighted: bool = True):
+def phase_coding(images: torch.Tensor, timesteps: int = 100, is_weighted: bool = False):
     """Function that converts a grayscale image into spiketrains following the phase neural coding
     presented in TODO
 
     Args:
-        image (np.ndarray): the grayscale image to convert of dimension (H, W)
+        image (np.ndarray): the grayscale image to convert of dimension (B, C, H, W)
         timesteps (int, optional): the number of timesteps. Must be a multiple of 8 (required for the phases). Defaults to 100.
         is_weighted (bool, optional): Flag that indicates whether the output spikes are weighted following the w_s parameter defined in the original paper. Defaults to True.
 
     Returns:
         np.ndarray: the spike tensor of dimension (T, H, W)
     """
-    # asserts
-    assert len(image.shape) == 2  # force grayscale
-    # check the conversion is possible. 8 because this will be the number of phases for the bit representation of [0, 255]
-    assert timesteps % 8 == 0
-
     # compute number of periods
-    periods = timesteps // 8
+    periods = (timesteps // 8) + 1
+
+    # convert to numpy because we have to
+    images = (images * 255).numpy().astype(np.uint8)
+    print(images.shape)
 
     # binary representation of the image (it makes 8 )
     bit_representation = np.unpackbits(
-        image[..., None], axis=-1).transpose(2, 0, 1).astype(np.float32)
+        images[..., None], axis=-1).transpose(-1, 0, 1, 2, 3).astype(np.float32)
+
+    print(bit_representation.shape)
 
     # IF the weighted input option is used
     if is_weighted:
@@ -60,12 +63,14 @@ def phase_coding(image: np.ndarray, timesteps: int = 100, is_weighted: bool = Tr
         w_s = [0.5, 0.25, 0.125, 0.0625, 0.0313,
                0.015625, 0.0078125, 0.00390625]
         for i, weight in enumerate(w_s):
-            bit_representation[i, :, :] = bit_representation[i, :, :] * weight
+            bit_representation[i, :, :, :,
+                               :] = bit_representation[i, :, :, :, :] * weight
 
     # Repeat the bit representation to create the final output spikes
-    S = np.tile(bit_representation, (periods, 1, 1))
+    S = np.tile(bit_representation, (periods, 1, 1, 1, 1))[
+        0:timesteps, :, :, :, :]
 
-    return S
+    return torch.from_numpy(S)
 
 
 def P_th(t: float, theta_0: float, tau_th: float):
@@ -74,7 +79,7 @@ def P_th(t: float, theta_0: float, tau_th: float):
     return P_th
 
 
-def ttfs(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, timesteps: int = 300):
+def ttfs_handmade(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, timesteps: int = 300):
     """Implementation of Time-To-First Spike (TTFS) neural coding for a grayscale image, as defined in
     the paper : https://www.frontiersin.org/articles/10.3389/fnins.2021.638474/full#F2
 
@@ -110,17 +115,20 @@ def ttfs(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, timesteps
     return S
 
 
+def ttfs(images: np.ndarray, timesteps: int):
+    return spikegen.latency(images, num_steps=timesteps, normalize=True, linear=False)
+
+
 if __name__ == '__main__':
     theta_0 = 1.0
     tau_th = 6.0
     ts = 80
 
     image = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
-    S = ttfs(image, theta_0, tau_th, ts)
-    print(S.shape, np.unique(S))
+    # S = ttfs(image, theta_0, tau_th, ts)
+    S = phase_coding(image, ts, is_weighted=False)
+    print(S.shape)
     exit()
-    S = phase_coding(image, ts, is_weighted=True)
-    print(S.shape, )
     spikes = (S == 1.).sum()
     nonspikes = (S == 0.).sum()
 
