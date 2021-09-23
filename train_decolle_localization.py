@@ -1,6 +1,6 @@
 import argparse
 from typing import Tuple
-from utils.neural_coding import rate_coding
+from utils.neural_coding import neural_coding, rate_coding
 from utils.localization_utils import image_to_spikes, iou_metric
 from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_transforms, init_oxford_dataset
 
@@ -110,7 +110,7 @@ def main():
     # Initialize parameters
     print('Init parameters')
     data_batch, _, _ = next(iter(train_loader))
-    data_batch = rate_coding(data_batch, timesteps=args.timesteps)
+    data_batch = neural_coding(data_batch, args)
     data_batch = data_batch.to(device)
     model.init_parameters(data_batch)
 
@@ -184,7 +184,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure data loading time
         data_time.update(time.time() - end)
 
-        images = rate_coding(images, args.timesteps)
+        images = neural_coding(images, args)
         class_id = onehot_np(class_id, n_classes=2)
 
         images = images.to(device)

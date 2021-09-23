@@ -8,6 +8,17 @@ from snntorch import spikegen
 import torch
 
 
+def neural_coding(images: torch.Tensor, args) -> torch.Tensor:
+    if args.neural_coding == 'rate':
+        return rate_coding(images, args.timesteps)
+    elif args.neural_coding == 'ttfs':
+        return ttfs(images, timesteps=args.timesteps)
+    elif args.neural_coding == 'phase':
+        return phase_coding(images, timesteps=args.timesteps, is_weighted=args.phase_weighted)
+    elif args.neural_coding == 'burst':
+        return burst_coding(images, args.burst_n_max, args.timesteps, args.burst_t_min)
+
+
 def burst_coding(images: torch.Tensor, N_max: int = 5, timesteps: int = 100, T_min: int = 2):
     # Compute N_s (the number of spikes per pixel)
     N_s = torch.ceil(N_max * images)
