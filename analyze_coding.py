@@ -67,22 +67,32 @@ if __name__ == '__main__':
 
     imgs = torch.squeeze(data_batch).numpy()
 
-    rate_batch = rate_coding(data_batch, timesteps=300)
-    ttfs_batch = ttfs(data_batch, timesteps=300)
-    phase_batch = phase_coding(data_batch, timesteps=300)
-    burst_batch = burst_coding(data_batch, timesteps=10)
-    
+    rate_batch = rate_coding(data_batch, timesteps=40)
+    ttfs_batch = ttfs(data_batch, timesteps=40)
+    phase_batch = phase_coding(data_batch, timesteps=40)
+    burst_batch = burst_coding(data_batch, timesteps=100)
 
     print(rate_batch.shape, ttfs_batch.shape,
           phase_batch.shape, burst_batch.shape)
     # exit()
 
     # batch size iterations
-    for i in range(ttfs_batch.shape[1]):
+    for i in range(1): #range(ttfs_batch.shape[1]):
         print(f'reading batch {i}')
         cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
-        spikes = torch.squeeze(burst_batch[:, i, :, :])
+        spikes = torch.squeeze(rate_batch[:, i, :, :])
         #  Plot animator
         fig, ax = plt.subplots()
         anim = splt.animator(spikes, fig, ax)
         anim.save(f"spike_pet_rate_anim_batch{i}.mp4")
+
+        fig = plt.figure(facecolor="w", figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+        #  s: size of scatter points; c: color of scatter points
+        splt.raster(spikes, ax, c="black")
+        plt.title("Input Layer")
+        plt.xlabel("Time step")
+        plt.ylabel("Neuron Number")
+        plt.show()
+        plt.close()

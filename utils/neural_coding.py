@@ -1,4 +1,6 @@
 import math
+
+import snntorch
 from utils.localization_utils import image_to_spikes
 import numpy as np
 import cv2
@@ -45,8 +47,9 @@ def burst_coding(images: torch.Tensor, N_max: int = 5, timesteps: int = 100, T_m
     return S
 
 
-def rate_coding(image: np.ndarray, timesteps: int = 100):
-    return image_to_spikes(image, max_duration=timesteps, input_shape=image.shape[1:])
+def rate_coding(images: torch.Tensor, timesteps: int = 100):
+    return spikegen.rate(images, num_steps=timesteps)
+    # return image_to_spikes(images, max_duration=timesteps, input_shape=images.shape[1:])
 
 
 def phase_coding(images: torch.Tensor, timesteps: int = 100, is_weighted: bool = False):
