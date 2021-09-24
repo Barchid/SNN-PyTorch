@@ -62,15 +62,15 @@ def get_args():
     # SNN coding of static image
     parser.add_argument('--neural-coding', type=str,
                         choices=['rate', 'ttfs', 'phase', 'burst'], default='rate')
-    parser.add_argument('--phase-weighted', default=False,
+    parser.add_argument('--phase-weighted', action="store_true",
                         help="Weighted input spikes (used in phase neural coding)")
     parser.add_argument('--burst-n-max', type=int, default=5,
                         help="Maximum number of spikes for burst coding.")
     parser.add_argument('--burst-t-min', type=int, default=2,
                         help="Minimum time interval of spikes for burst coding.")
-    parser.add_argument('--ttfs-normalize', default=True,
+    parser.add_argument('--ttfs-normalize', action="store_true",
                         help="Normalize the TTFS neural coding")
-    parser.add_argument('--ttfs-linear', default=True,
+    parser.add_argument('--ttfs-linear', action="store_true",
                         help="Linear latency code instead of log latency code (for ttfs neural coding).")
 
     # Parameter to save some metrics
