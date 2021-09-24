@@ -135,3 +135,4 @@ experiments/*
 !experiments/.gitkeep
 data/*
 !data/.gitkeep
+notes.md
