@@ -68,6 +68,10 @@ def get_args():
                         help="Maximum number of spikes for burst coding.")
     parser.add_argument('--burst-t-min', type=int, default=2,
                         help="Minimum time interval of spikes for burst coding.")
+    parser.add_argument('--ttfs-normalize', default=True,
+                        help="Normalize the TTFS neural coding")
+    parser.add_argument('--ttfs-linear', default=True,
+                        help="Linear latency code instead of log latency code (for ttfs neural coding).")
 
     # Parameter to save some metrics
     parser.add_argument('--save-preds', type=int, default=0,

@@ -14,7 +14,7 @@ def neural_coding(images: torch.Tensor, args) -> torch.Tensor:
     if args.neural_coding == 'rate':
         return rate_coding(images, args.timesteps)
     elif args.neural_coding == 'ttfs':
-        return ttfs(images, timesteps=args.timesteps)
+        return ttfs(images, timesteps=args.timesteps, normalize=args.ttfs_normalize, linear=args.ttfs_linear)
     elif args.neural_coding == 'phase':
         return phase_coding(images, timesteps=args.timesteps, is_weighted=args.phase_weighted)
     elif args.neural_coding == 'burst':
@@ -132,8 +132,8 @@ def ttfs_handmade(image: np.ndarray, theta_0: float = 1.0, tau_th: float = 6.0, 
     return S
 
 
-def ttfs(images: np.ndarray, timesteps: int):
-    return spikegen.latency(images, num_steps=timesteps, normalize=True, linear=False)
+def ttfs(images: np.ndarray, timesteps: int, normalize: bool, linear: bool):
+    return spikegen.latency(images, num_steps=timesteps, normalize=normalize, linear=linear)
 
 
 if __name__ == '__main__':

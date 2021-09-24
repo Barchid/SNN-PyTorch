@@ -74,13 +74,12 @@ if __name__ == '__main__':
 
     print(rate_batch.shape, ttfs_batch.shape,
           phase_batch.shape, burst_batch.shape)
-    # exit()
 
     # batch size iterations
-    for i in range(1): #range(ttfs_batch.shape[1]):
+    for i in range(1):  # range(ttfs_batch.shape[1]):
         print(f'reading batch {i}')
         cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
-        spikes = torch.squeeze(rate_batch[:, i, :, :])
+        spikes = torch.squeeze(ttfs_batch[:, i, :, :])
         #  Plot animator
         fig, ax = plt.subplots()
         anim = splt.animator(spikes, fig, ax)
