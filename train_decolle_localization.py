@@ -294,8 +294,9 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
             r_np[i], bbox.cpu().detach().numpy(), batch_size, args.height, args.width))  # last prediction
 
         if batch_number % args.save_preds == 0:
+            prefix = "TRAIN" if is_training else "TEST"
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'{prefix}_result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
 
             # Compute the SAM for each layer and each timesteps
             for i in range(len(model)):
@@ -308,7 +309,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
                     M = torch.sum(NCS, dim=1)
                     print(M.shape)  # TODO debug
-                    save_heatmaps(M, grayscales, i, t, args, batch_number)
+                    save_heatmaps(M, grayscales, i, t, args,
+                                  batch_number, prefix)
 
     return total_loss, layers_iou, layers_act
 
@@ -355,7 +357,7 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
     return train_loader, val_loader
 
 
-def save_heatmaps(M, images, layer, timestep, args, batch_number):
+def save_heatmaps(M, images, layer, timestep, args, batch_number, prefix):
     for i in range(M.shape[0]):
         heatmap = M[i].numpy()
 
@@ -376,7 +378,7 @@ def save_heatmaps(M, images, layer, timestep, args, batch_number):
         print(
             f'Saving SAM of:Batch={i}\t\tLayer={layer}\t\tTimestep={timestep}')
         cv2.imwrite(
-            f'SAM/batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
+            f'SAM/{prefix}_batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
 
 
 def show_cam_on_image(img: np.ndarray,
