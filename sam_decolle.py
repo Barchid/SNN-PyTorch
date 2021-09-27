@@ -30,8 +30,6 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import cv2
 
-# params to change
-BATCH_NUMBER = 0
 # steepness of the exponential kernel function (in the Spiking Activation Map formula)
 GAMMA = 0.4
 
@@ -55,11 +53,6 @@ def main():
     # create the experiment dir if it does not exist
     if not os.path.exists(os.path.join('experiments', args.experiment)):
         os.mkdir(os.path.join('experiments', args.experiment))
-
-    # create the sam_imgs dir inside the experiment
-    SAM_DIR = os.path.join('experiments', args.experiments, 'sam_imgs')
-    if not os.path.exists(SAM_DIR):
-        os.mkdir(SAM_DIR)
 
     model = LenetDECOLLE(
         (1, args.height, args.width),
@@ -88,11 +81,10 @@ def main():
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(args.resume, map_location=device)
             args.start_epoch = checkpoint['epoch']
-            best_acc = checkpoint['best_acc'].to(device)
+            best_acc = checkpoint['best_acc']
             model.load_state_dict(checkpoint['state_dict'])
-            # optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
         else:
@@ -115,8 +107,8 @@ def main():
     with torch.no_grad():
         model.eval()
 
-        images, class_id, bbox = val_loader[BATCH_NUMBER]
-        grayscales = images
+        images, class_id, bbox = next(iter(val_loader))
+        grayscales = images.numpy()
         images = neural_coding(images, args)
         class_id = onehot_np(class_id, n_classes=2)
 
@@ -126,12 +118,12 @@ def main():
 
         # compute output
         total_loss, layers_miou, layers_act = snn_inference(
-            images, bbox, model, criterion, args, grayscales, batch_number=BATCH_NUMBER)
+            images, bbox, model, criterion, args, grayscales)
 
         print('Saving images of batch')  # TODO : make good prints
 
 
-def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args, grayscales, batch_number=0):
+def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args, grayscales):
     # burnin phase
     model.init(images.transpose(0, 1), args.burnin)
     t_sample = images.shape[0]
@@ -183,8 +175,11 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args
             r_np[i], bbox.cpu().detach().numpy(), batch_size, args.height, args.width))  # last prediction
 
         save_prediction_errors(r_cum[i, :, :, :], bbox.cpu().detach().numpy(
-        ), args, result_file=f'result_preds_layer{i}_batch{batch_number}.png')
+        ), args, result_file=f'result_preds_layer{i}.png')
 
+    print(f"LOSS={total_loss}\t\tIoU={layers_iou[-1]}")
+
+    print('COMPUTE SAM')
     # Compute the SAM for each layer and each timesteps
     for i in range(len(model)):
         for t in range(args.burnin + 1, t_sample):
@@ -211,14 +206,16 @@ def save_heatmaps(M, images, layer, timestep, args):
         heatmap = (heatmap - min) / (max - min)
 
         # resize the heatmap
-        heatmap = cv2.resize(heatmap, (args.height, args.width))
+        heatmap = cv2.resize(heatmap, (args.width, args.height))
 
         # three channeled version of the grayscale image
-        image = cv2.cvtColor(images[0], cv2.COLOR_GRAY2RGB)
+        image = cv2.cvtColor(images[i][0], cv2.COLOR_GRAY2RGB)
 
         heatmap = show_cam_on_image(image, heatmap, use_rgb=True)
 
         # save the heatmap
+        print(
+            f'Saving SAM of:Batch={i}\t\tLayer={layer}\t\tTimestep={timestep}')
         cv2.imwrite(
             f'SAM/b{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
 
@@ -286,7 +283,7 @@ def get_dataloader(args) -> DataLoader:
     #     train_data, batch_size=args.batch_size, shuffle=must_shuffle, num_workers=args.workers
     # )
     val_loader = torch.utils.data.DataLoader(
-        val_data, batch_size=args.batch_size, shuffle=False, num_workers=args.workers
+        val_data, batch_size=args.batch_size, shuffle=True, num_workers=args.workers
     )
 
     return val_loader
