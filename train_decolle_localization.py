@@ -307,7 +307,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
                         # formula (12) in the paper of SAM
                         NCS[mask] += math.exp(-GAMMA * abs(t - t_p))
 
-                    M = torch.sum(NCS, dim=1)
+                    M = torch.sum(NCS * s_cum[i][t], dim=1)
                     save_heatmaps(M, grayscales, i, t, args,
                                   batch_number, prefix)
 
