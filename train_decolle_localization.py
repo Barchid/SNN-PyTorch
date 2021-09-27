@@ -15,6 +15,8 @@ import time
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args import get_args
 import warnings
+import math
+import cv2
 
 import numpy as np
 
@@ -30,6 +32,9 @@ from torchsummary import summary
 
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+# SAM hyperparameter
+GAMMA = 0.4
 
 
 def main():
@@ -229,7 +234,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training, batch_number=0):
+def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, optimizer, args, is_training, grayscales, batch_number=0):
     # burnin phase
     model.init(images.transpose(0, 1), args.burnin)
     t_sample = images.shape[0]
@@ -247,6 +252,9 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
     # cumulates the predictions for each timestep
     r_cum = np.zeros((len(model), batch_size, args.timesteps - args.burnin, 4))
+
+    # Cumulates the spiking feature maps for each timesteps
+    s_cum = [[] for _ in range(len(model))]
 
     # FOR EACH TIMESTEP
     for k in (range(args.burnin, t_sample)):
@@ -267,14 +275,17 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         r_np = np.array(tonp(r))
         r_cum[:, :, k - args.burnin, :] += r_np
 
+        # update the cumulator of spikes if visualization used
+        if batch_number % args.save_preds == 0:
+            for i in range(len(model)-1):
+                s_cum[i].append(s[i])
+            s_cum[-1].append((u[-1] >= 0.).float())
+
         for i in range(len(model)):
             layers_act[i] += tonp(s[i].mean().data)/t_sample
 
         # reinitialize loss_tv
         loss_tv = torch.tensor(0.).to(device)
-
-    # print('GT', bbox[0])
-    # print('PRED', r_np[2, 0])
 
     # Compute the IoU for each layer
     layers_iou = []
@@ -284,7 +295,20 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
         if batch_number % args.save_preds == 0:
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}_batch{batch_number}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
+
+            # Compute the SAM for each layer and each timesteps
+            for i in range(len(model)):
+                for t in range(args.burnin + 1, t_sample):
+                    NCS = torch.zeros_like(s_cum[i][0])
+                    for t_p in range(args.burnin, t):
+                        mask = s_cum[i][t_p] == 1.
+                        # formula (12) in the paper of SAM
+                        NCS[mask] += math.exp(-GAMMA * abs(t - t_p))
+
+                    M = torch.sum(NCS, dim=1)
+                    print(M.shape)  # TODO debug
+                    save_heatmaps(M, grayscales, i, t, args, batch_number)
 
     return total_loss, layers_iou, layers_act
 
@@ -329,6 +353,57 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
     )
 
     return train_loader, val_loader
+
+
+def save_heatmaps(M, images, layer, timestep, args, batch_number):
+    for i in range(M.shape[0]):
+        heatmap = M[i].numpy()
+
+        # normalize between 0 and 1
+        max = np.max(heatmap)
+        min = np.min(heatmap)
+        heatmap = (heatmap - min) / (max - min)
+
+        # resize the heatmap
+        heatmap = cv2.resize(heatmap, (args.width, args.height))
+
+        # three channeled version of the grayscale image
+        image = cv2.cvtColor(images[i][0], cv2.COLOR_GRAY2RGB)
+
+        heatmap = show_cam_on_image(image, heatmap, use_rgb=True)
+
+        # save the heatmap
+        print(
+            f'Saving SAM of:Batch={i}\t\tLayer={layer}\t\tTimestep={timestep}')
+        cv2.imwrite(
+            f'SAM/batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
+
+
+def show_cam_on_image(img: np.ndarray,
+                      mask: np.ndarray,
+                      use_rgb: bool = False,
+                      colormap: int = cv2.COLORMAP_JET) -> np.ndarray:
+    """ This function overlays the cam mask on the image as an heatmap.
+    By default the heatmap is in BGR format.
+
+    :param img: The base image in RGB or BGR format.
+    :param mask: The cam mask.
+    :param use_rgb: Whether to use an RGB or BGR heatmap, this should be set to True if 'img' is in RGB format.
+    :param colormap: The OpenCV colormap to be used.
+    :returns: The default image with the cam overlay.
+    """
+    heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
+    if use_rgb:
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+    heatmap = np.float32(heatmap) / 255
+
+    if np.max(img) > 1:
+        raise Exception(
+            "The input image should np.float32 in the range [0, 1]")
+
+    cam = heatmap + img
+    cam = cam / np.max(cam)
+    return np.uint8(255 * cam)
 
 
 if __name__ == '__main__':
