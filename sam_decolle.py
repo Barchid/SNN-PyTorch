@@ -28,7 +28,7 @@ import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-from torchsummary import summary
+import cv2
 
 # params to change
 BATCH_NUMBER = 0
@@ -116,7 +116,7 @@ def main():
         model.eval()
 
         images, class_id, bbox = val_loader[BATCH_NUMBER]
-
+        grayscales = images
         images = neural_coding(images, args)
         class_id = onehot_np(class_id, n_classes=2)
 
@@ -126,12 +126,12 @@ def main():
 
         # compute output
         total_loss, layers_miou, layers_act = snn_inference(
-            images, bbox, model, criterion, args)
+            images, bbox, model, criterion, args, grayscales, batch_number=BATCH_NUMBER)
 
         print('Saving images of batch')  # TODO : make good prints
 
 
-def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args, batch_number=0):
+def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args, grayscales, batch_number=0):
     # burnin phase
     model.init(images.transpose(0, 1), args.burnin)
     t_sample = images.shape[0]
@@ -195,16 +195,60 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args
                 NCS[mask] += math.exp(-GAMMA * abs(t - t_p))
 
             M = torch.sum(NCS, dim=1)
-            print(M.shape)
-
-            # resize to full size
+            print(M.shape)  # TODO debug
+            save_heatmaps(M, grayscales, i, t, args)
 
     return total_loss, layers_iou, layers_act
 
-def save_heatmaps(M, args):
+
+def save_heatmaps(M, images, layer, timestep, args):
     for i in range(M.shape[0]):
-        heatmap = M[i]
-        
+        heatmap = M[i].numpy()
+
+        # normalize between 0 and 1
+        max = np.max(heatmap)
+        min = np.min(heatmap)
+        heatmap = (heatmap - min) / (max - min)
+
+        # resize the heatmap
+        heatmap = cv2.resize(heatmap, (args.height, args.width))
+
+        # three channeled version of the grayscale image
+        image = cv2.cvtColor(images[0], cv2.COLOR_GRAY2RGB)
+
+        heatmap = show_cam_on_image(image, heatmap, use_rgb=True)
+
+        # save the heatmap
+        cv2.imwrite(
+            f'SAM/b{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
+
+
+def show_cam_on_image(img: np.ndarray,
+                      mask: np.ndarray,
+                      use_rgb: bool = False,
+                      colormap: int = cv2.COLORMAP_JET) -> np.ndarray:
+    """ This function overlays the cam mask on the image as an heatmap.
+    By default the heatmap is in BGR format.
+
+    :param img: The base image in RGB or BGR format.
+    :param mask: The cam mask.
+    :param use_rgb: Whether to use an RGB or BGR heatmap, this should be set to True if 'img' is in RGB format.
+    :param colormap: The OpenCV colormap to be used.
+    :returns: The default image with the cam overlay.
+    """
+    heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
+    if use_rgb:
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+    heatmap = np.float32(heatmap) / 255
+
+    if np.max(img) > 1:
+        raise Exception(
+            "The input image should np.float32 in the range [0, 1]")
+
+    cam = heatmap + img
+    cam = cam / np.max(cam)
+    return np.uint8(255 * cam)
+
 
 def get_dataloader(args) -> DataLoader:
     # Initialize Oxford-IIIT-Pet dataset in data/oxford_iiit_pet directory
