@@ -188,7 +188,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     for i, (images, class_id, bbox) in enumerate(dataloader):
         # measure data loading time
         data_time.update(time.time() - end)
-
+        grayscales = images.numpy()
         images = neural_coding(images, args)
         class_id = onehot_np(class_id, n_classes=2)
 
@@ -198,7 +198,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # compute output
         total_loss, layers_miou, layers_act = snn_inference(
-            images, bbox, model, criterion, optimizer, args, is_training, batch_number=i)
+            images, bbox, model, criterion, optimizer, args, is_training, grayscales, batch_number=i)
 
         # measure accuracy and record loss
         losses.update(total_loss.item(), images.size(0))
