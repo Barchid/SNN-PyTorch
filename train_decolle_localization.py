@@ -375,7 +375,7 @@ def save_heatmaps(M, images, layer, timestep, args, batch_number, prefix):
 
         # save the heatmap
         print(
-            f'Saving SAM of:Batch={i}\t\tLayer={layer}\t\tTimestep={timestep}')
+            f'Saving SAM of:Batch={batch_number}\t\tImage={i}\t\tLayer={layer}\t\tTimestep={timestep}')
         cv2.imwrite(
             f'SAM/{args.experiment}_{prefix}_batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
 
