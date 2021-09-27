@@ -296,7 +296,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         if batch_number % args.save_preds == 0:
             prefix = "TRAIN" if is_training else "TEST"
             save_prediction_errors(
-                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'{prefix}_result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
+                r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'{args.experiment}_{prefix}_result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
 
             # Compute the SAM for each layer and each timesteps
             for i in range(len(model)):
@@ -377,7 +377,7 @@ def save_heatmaps(M, images, layer, timestep, args, batch_number, prefix):
         print(
             f'Saving SAM of:Batch={i}\t\tLayer={layer}\t\tTimestep={timestep}')
         cv2.imwrite(
-            f'SAM/{prefix}_batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
+            f'SAM/{args.experiment}_{prefix}_batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
 
 
 def show_cam_on_image(img: np.ndarray,

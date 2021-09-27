@@ -120,8 +120,6 @@ def main():
         total_loss, layers_miou, layers_act = snn_inference(
             images, bbox, model, criterion, args, grayscales)
 
-        print('Saving images of batch')  # TODO : make good prints
-
 
 def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args, grayscales):
     # burnin phase
@@ -159,8 +157,9 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args
         r_cum[:, :, k - args.burnin, :] += r_np
 
         # update the cumulator of spikes
-        for i in range(len(model)):
+        for i in range(len(model)-1):
             s_cum[i].append(s[i])
+        s_cum[-1].append((u[-1] >= 0.).float())
 
         for i in range(len(model)):
             layers_act[i] += tonp(s[i].mean().data)/t_sample
@@ -179,7 +178,6 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, args
 
     print(f"LOSS={total_loss}\t\tIoU={layers_iou[-1]}")
 
-    print('COMPUTE SAM')
     # Compute the SAM for each layer and each timesteps
     for i in range(len(model)):
         for t in range(args.burnin + 1, t_sample):
