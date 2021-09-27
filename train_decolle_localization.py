@@ -278,8 +278,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
         # update the cumulator of spikes if visualization used
         if batch_number % args.save_preds == 0:
             for i in range(len(model)-1):
-                s_cum[i].append(s[i])
-            s_cum[-1].append((u[-1] >= 0.).float())
+                s_cum[i].append(s[i].detach().cpu())
+            s_cum[-1].append((u[-1].detach().cpu() >= 0.).float())
 
         for i in range(len(model)):
             layers_act[i] += tonp(s[i].mean().data)/t_sample
