@@ -29,6 +29,8 @@ import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torchsummary import summary
+import matplotlib.pyplot as plt
+from celluloid import Camera
 
 # GPU if available (or CPU instead)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -300,6 +302,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
 
             # Compute the SAM for each layer and each timesteps
             for t in range(args.burnin + 1, t_sample):
+                heatmaps = []
                 NCS = torch.zeros_like(s_cum[i][0])
                 for t_p in range(args.burnin, t):
                     mask = s_cum[i][t_p] == 1.
@@ -307,7 +310,15 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
                     NCS[mask] += math.exp(-GAMMA * abs(t - t_p))
 
                 M = torch.sum(NCS * s_cum[i][t], dim=1)
-                save_heatmaps(M, grayscales, i, t, args, batch_number, prefix)
+                heatmap = create_heatmap(
+                    M, grayscales, i, t, args, batch_number, prefix)
+
+                heatmaps.append(heatmap)
+
+                # save video of the SAM evolution when we arrive at the last timestep
+                if t == t_sample - 1:
+                    heatmap_video(
+                        heatmaps, filename=f"{args.experiments}/{prefix}_L{i}_B{str(batch_number).zfill(4)}.mp4")
 
     return total_loss, layers_iou, layers_act
 
@@ -354,7 +365,7 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
     return train_loader, val_loader
 
 
-def save_heatmaps(M, images, layer, timestep, args, batch_number, prefix):
+def create_heatmap(M, images, layer, timestep, args, batch_number, prefix):
     for i in range(M.shape[0]):
         heatmap = M[i].numpy()
 
@@ -376,6 +387,21 @@ def save_heatmaps(M, images, layer, timestep, args, batch_number, prefix):
             f'Saving SAM of:Batch={batch_number}\t\tImage={i}\t\tLayer={layer}\t\tTimestep={timestep}')
         cv2.imwrite(
             f'SAM/{args.experiment}_{prefix}_batch{str(batch_number).zfill(5)}_image{i}_l{layer}_ts{str(timestep).zfill(4)}.png', heatmap)
+
+        return heatmap
+
+
+def heatmap_video(heatmaps, filename):
+    fig, ax = plt.subplots()
+    camera = Camera(fig)
+    plt.axis("off")
+
+    for heatmap in heatmaps:
+        ax.imshow(heatmap)
+        camera.snap()
+
+    anim = camera.animate(interval=40)
+    anim.save(filename)
 
 
 def show_cam_on_image(img: np.ndarray,
