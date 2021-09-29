@@ -301,8 +301,8 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
                 r_cum[i, :, :, :], bbox.cpu().detach().numpy(), args, result_file=f'{args.experiment}_{prefix}_result_preds_layer{i}_batch{str(batch_number).zfill(5)}.png')
 
             # Compute the SAM for each layer and each timesteps
+            heatmaps = []
             for t in range(args.burnin + 1, t_sample):
-                heatmaps = []
                 NCS = torch.zeros_like(s_cum[i][0])
                 for t_p in range(args.burnin, t):
                     mask = s_cum[i][t_p] == 1.
