@@ -397,6 +397,7 @@ def heatmap_video(heatmaps, filename):
     plt.axis("off")
 
     for heatmap in heatmaps:
+        print('coucou')
         ax.imshow(heatmap)
         camera.snap()
 
