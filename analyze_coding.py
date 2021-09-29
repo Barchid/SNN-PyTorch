@@ -49,7 +49,7 @@ def get_dataloaders() -> Tuple[DataLoader, DataLoader]:
     )
 
     # Dataloaders
-    must_shuffle = True
+    must_shuffle = False
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=4, shuffle=must_shuffle, num_workers=0
     )
@@ -68,9 +68,9 @@ if __name__ == '__main__':
     imgs = torch.squeeze(data_batch).numpy()
 
     rate_batch = rate_coding(data_batch, timesteps=40)
-    ttfs_batch = ttfs(data_batch, timesteps=40)
+    ttfs_batch = ttfs(data_batch, timesteps=40, normalize=True, linear=True)
     phase_batch = phase_coding(data_batch, timesteps=40)
-    burst_batch = burst_coding(data_batch, timesteps=100)
+    burst_batch = burst_coding(data_batch, timesteps=40)
 
     print(rate_batch.shape, ttfs_batch.shape,
           phase_batch.shape, burst_batch.shape)
@@ -79,19 +79,25 @@ if __name__ == '__main__':
     for i in range(1):  # range(ttfs_batch.shape[1]):
         print(f'reading batch {i}')
         cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
-        spikes = torch.squeeze(ttfs_batch[:, i, :, :])
         #  Plot animator
+        spikes = torch.squeeze(ttfs_batch[:, i, :, :])
         fig, ax = plt.subplots()
         anim = splt.animator(spikes, fig, ax)
-        anim.save(f"spike_pet_rate_anim_batch{i}.mp4")
+        anim.save(f"spike_ttfs.mp4")
 
-        fig = plt.figure(facecolor="w", figsize=(10, 5))
-        ax = fig.add_subplot(111)
+        spikes = torch.squeeze(rate_batch[:, i, :, :])
+        fig, ax = plt.subplots()
+        anim = splt.animator(spikes, fig, ax)
+        anim.save(f"spike_rate.mp4")
 
-        #  s: size of scatter points; c: color of scatter points
-        splt.raster(spikes, ax, c="black")
-        plt.title("Input Layer")
-        plt.xlabel("Time step")
-        plt.ylabel("Neuron Number")
-        plt.show()
-        plt.close()
+        spikes = torch.squeeze(phase_batch[:, i, :, :])
+        fig, ax = plt.subplots()
+        anim = splt.animator(spikes, fig, ax)
+        anim.save(f"spike_phase.mp4")
+
+        spikes = torch.squeeze(burst_batch[:, i, :, :])
+        fig, ax = plt.subplots()
+        anim = splt.animator(spikes, fig, ax)
+        anim.save(f"spike_burst.mp4")
+
+        
