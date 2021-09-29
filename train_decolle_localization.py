@@ -318,7 +318,7 @@ def snn_inference(images, bbox, model: DECOLLEBase, criterion: DECOLLELoss, opti
                 # save video of the SAM evolution when we arrive at the last timestep
                 if t == t_sample - 1:
                     heatmap_video(
-                        heatmaps, filename=f"{args.experiment}/{prefix}_L{i}_B{str(batch_number).zfill(4)}.mp4")
+                        heatmaps, filename=f"experiments/{args.experiment}/{prefix}_L{i}_B{str(batch_number).zfill(4)}.mp4")
 
     return total_loss, layers_iou, layers_act
 
