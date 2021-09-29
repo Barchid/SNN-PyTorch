@@ -372,7 +372,7 @@ def create_heatmap(M, images, layer, timestep, args, batch_number, prefix):
         # normalize between 0 and 1
         max = np.max(heatmap)
         min = np.min(heatmap)
-        heatmap = (heatmap - min) / (max - min)
+        heatmap = (heatmap - min) / (max - min + 1e-7)
 
         # resize the heatmap
         heatmap = cv2.resize(heatmap, (args.width, args.height))
@@ -397,7 +397,6 @@ def heatmap_video(heatmaps, filename):
     plt.axis("off")
 
     for heatmap in heatmaps:
-        print('coucou')
         ax.imshow(heatmap)
         camera.snap()
 
