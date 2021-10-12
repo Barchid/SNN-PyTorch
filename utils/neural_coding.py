@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from utils.snn_utils import image2spiketrain
 from snntorch import spikegen
 import torch
+from torchvision.transforms.functional import affine
 
 
 def neural_coding(images: torch.Tensor, args) -> torch.Tensor:
@@ -19,6 +20,47 @@ def neural_coding(images: torch.Tensor, args) -> torch.Tensor:
         return phase_coding(images, timesteps=args.timesteps, is_weighted=args.phase_weighted)
     elif args.neural_coding == 'burst':
         return burst_coding(images, args.burst_n_max, args.timesteps, args.burst_t_min)
+    elif args.neural_coding == 'saccade_delta':
+        return None  # TODO
+
+
+def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20, max_dy: int = 20, delta_threshold = 0.1):
+    S = torch.zeros(
+        (timesteps, images.shape[0], images.shape[1], images.shape[2], images.shape[3]))
+
+    dx_step = max_dx / (2 * timesteps)  # pixel distance per timestep
+    dy_step = max_dy / timesteps
+
+    dx = 0.
+    dy = 0.
+
+    translations = torch.zeros((timesteps, *images.shape))
+    i = 0
+    # first saccade
+    for _ in range(int(timesteps/3)):
+        dx += dx_step
+        dy += dy_step
+        print(dx, dy)
+        translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
+        i+=1
+
+    # second saccade
+    for _ in range(int(timesteps/3)):
+        dx += dx_step
+        dy = max(0, dy - dy_step) # avoid negative value
+        print(dx, dy)
+        translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
+        i+=1
+
+    # third saccade
+    last_duration = timesteps - 2*int(timesteps/3)
+    for _ in range(last_duration):
+        dx = max(0, dx - 2 * dx_step) # avoid negative value
+        print(dx, dy)
+        translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
+        i+=1
+        
+    return spikegen.delta(translations, threshold=delta_threshold)
 
 
 def burst_coding(images: torch.Tensor, N_max: int = 5, timesteps: int = 100, T_min: int = 2):
