@@ -25,9 +25,6 @@ def neural_coding(images: torch.Tensor, args) -> torch.Tensor:
 
 
 def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20, max_dy: int = 20, delta_threshold = 0.1):
-    S = torch.zeros(
-        (timesteps, images.shape[0], images.shape[1], images.shape[2], images.shape[3]))
-
     dx_step = max_dx / (2 * timesteps)  # pixel distance per timestep
     dy_step = max_dy / timesteps
 
@@ -60,6 +57,24 @@ def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20,
         translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
         i+=1
         
+    return spikegen.delta(translations, threshold=delta_threshold)
+
+def synchrony_coding(images: torch.Tensor, timesteps: int = 100, saccade_number: int = 3, delta_threshold: float = 0.1, dx: int = 2):
+    translations = torch.zeros((timesteps, *images.shape))
+    i = 0
+
+    # compute time between 2 saccades
+    rest_time = math.floor(timesteps / saccade_number)
+
+    for _ in range(saccade_number):
+        translations[i] = affine(images, 0, [dx, dx], 1, 0)
+        translations[i+1] = affine(images, 0, [dx, 0], 1, 0)
+        translations[i+2] = affine(images, 0, [2 * dx, 0], 1, 0)
+        translations[i+3] = affine(images, 0, [dx, 0], 1, 0)
+        translations[i] = affine(images, 0, [0, 0], 1, 0)
+
+        i += rest_time
+
     return spikegen.delta(translations, threshold=delta_threshold)
 
 
