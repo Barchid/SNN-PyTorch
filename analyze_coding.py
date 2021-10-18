@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 from torch.utils.data.dataloader import DataLoader
-from utils.neural_coding import burst_coding, phase_coding, rate_coding, saccade_coding, ttfs
+from utils.neural_coding import burst_coding, phase_coding, rate_coding, saccade_coding, synchrony_coding, ttfs
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -67,7 +67,8 @@ if __name__ == '__main__':
 
     imgs = torch.squeeze(data_batch).numpy()
 
-    sacc_batch = saccade_coding(data_batch, timesteps=40, delta_threshold=0.2)
+    synchro_batch = synchrony_coding(data_batch, timesteps=40, saccade_number=2)
+    #sacc_batch = saccade_coding(data_batch, timesteps=40, delta_threshold=0.2)
     # rate_batch = rate_coding(data_batch, timesteps=40)
     # ttfs_batch = ttfs(data_batch, timesteps=40, normalize=True, linear=True)
     # phase_batch = phase_coding(data_batch, timesteps=40)
@@ -75,18 +76,24 @@ if __name__ == '__main__':
 
     # print(rate_batch.shape, ttfs_batch.shape,
     #       phase_batch.shape, burst_batch.shape)
-    print(sacc_batch.shape)
+    # print(sacc_batch.shape)
+    print(synchro_batch.shape)
 
     # batch size iterations
     for i in range(1):  # range(ttfs_batch.shape[1]):
         print(f'reading batch {i}')
         cv2.imwrite(f'mage_batch{i}.png', (imgs[i] * 255).astype(np.uint8))
 
+        spikes = torch.squeeze(synchro_batch[:, i, :, :])
+        fig, ax = plt.subplots()
+        anim = splt.animator(spikes, fig, ax)
+        anim.save(f"spike_synchro.mp4")
+        exit()
+
         spikes = torch.squeeze(sacc_batch[:, i, :, :])
         fig, ax = plt.subplots()
         anim = splt.animator(spikes, fig, ax)
         anim.save(f"spike_saccades.mp4")
-        exit()
 
         #  Plot animator
         spikes = torch.squeeze(ttfs_batch[:, i, :, :])
