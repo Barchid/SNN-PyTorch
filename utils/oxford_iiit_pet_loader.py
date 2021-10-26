@@ -170,7 +170,6 @@ def DOG_transform(image, sigma1=1.0, sigma2=3.0, kernel_size=5):
                           sigmaX=sigma2, sigmaY=sigma2)
 
     DOG = g2 - g1
-    # cv2.imshow('coucou', DOG)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     # DOG[DOG>0]=255

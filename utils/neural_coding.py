@@ -37,7 +37,7 @@ def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20,
     for _ in range(int(timesteps/3)):
         dx += dx_step
         dy += dy_step
-        print(dx, dy)
+        # print(dx, dy)
         translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
         i+=1
 
@@ -45,7 +45,7 @@ def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20,
     for _ in range(int(timesteps/3)):
         dx += dx_step
         dy = max(0, dy - dy_step) # avoid negative value
-        print(dx, dy)
+        # print(dx, dy)
         translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
         i+=1
 
@@ -53,7 +53,7 @@ def saccade_coding(images: torch.Tensor, timesteps: int = 100, max_dx: int = 20,
     last_duration = timesteps - 2*int(timesteps/3)
     for _ in range(last_duration):
         dx = max(0, dx - 2 * dx_step) # avoid negative value
-        print(dx, dy)
+        # print(dx, dy)
         translations[i] = affine(images, 0, [math.floor(dx), math.floor(dy)], 1, 0)
         i+=1
         
@@ -68,7 +68,7 @@ def synchrony_coding(images: torch.Tensor, timesteps: int = 100, saccade_number:
 
     for _ in range(saccade_number):
         translations[i] = affine(images, 0, [dx, dx], 1, 0)
-        translations[i+1] = affine(images, 0, [dx, 0], 1, 0)
+        translations[i+1] = affine(images, 0, [dx, math.floor(dx/2)], 1, 0)
         translations[i+2] = affine(images, 0, [2 * dx, 0], 1, 0)
         translations[i+3] = affine(images, 0, [dx, 0], 1, 0)
         translations[i] = affine(images, 0, [0, 0], 1, 0)

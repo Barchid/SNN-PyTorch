@@ -134,3 +134,18 @@ def iou_metric(preds, gts, batch_size, HEIGHT, WIDTH):
         iou_sum += iou(pred, gt)
 
     return iou_sum / float(batch_size)
+
+
+def center_error(pred_bbox, gt_bbox):
+    pred_center = np.array([
+        pred_bbox[0] + (pred_bbox[2] - pred_bbox[0]) / 2,  # coord x of center
+        pred_bbox[1] + (pred_bbox[3] - pred_bbox[1]) / 2,  # coord y of center
+    ])
+
+    gt_center = np.array([
+        gt_bbox[0] + (gt_bbox[2] - gt_bbox[0]) / 2,  # coord x of center
+        gt_bbox[1] + (gt_bbox[3] - gt_bbox[1]) / 2,  # coord y of center
+    ])
+
+    error = np.sqrt(np.sum(np.power(pred_center - gt_center, 2)))
+    return error
