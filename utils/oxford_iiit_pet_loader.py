@@ -163,20 +163,27 @@ def preprocess_mask(mask):
     return mask
 
 
-def DOG_transform(image, sigma1=1.0, sigma2=3.0, kernel_size=5):
+def DOG_transform(image, sigma1=1.0, sigma2=4.0, kernel_size=7):
     g1 = cv2.GaussianBlur(image, (kernel_size, kernel_size),
                           sigmaX=sigma1, sigmaY=sigma1)
     g2 = cv2.GaussianBlur(image, (kernel_size, kernel_size),
                           sigmaX=sigma2, sigmaY=sigma2)
 
-    DOG = g2 - g1
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    # DOG[DOG>0]=255
-    # DOG[DOG<=0]=0
-    # DOG = DOG.astype(np.uint8)
-    # print(DOG.dtype)
+    DOG = g1 - g2
+
     return DOG
+
+def on_off_filtering(image, sigma_center=1.0, sigma_surround=4.0, kernel_size=7):
+    G_center = cv2.GaussianBlur(image, (kernel_size, kernel_size),
+                          sigmaX=sigma_center, sigmaY=sigma_center)
+    G_surround = cv2.GaussianBlur(image, (kernel_size, kernel_size),
+                          sigmaX=sigma_surround, sigmaY=sigma_surround)
+    DOG = G_center - G_surround
+
+    ON = np.clip(DOG, 0., None)
+    OFF = np.clip(-DOG, 0., None)
+
+    return np.stack([ON, OFF], axis=0)
 
 
 def get_transforms(height, width, is_training=False, is_grayscale=True):
@@ -296,7 +303,7 @@ class OxfordPetDatasetLocalization(Dataset):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if self.use_DOG:
-            image = DOG_transform(image)
+            image = on_off_filtering(image)
 
         # get class from classes directory
         class_id = get_class_from_filename(image_filename)
@@ -370,6 +377,18 @@ def visualize_augmentations(dataset, idx=0, samples=5):
 
 
 if __name__ == "__main__":
-    im = cv2.imread('dumas.PNG', cv2.IMREAD_GRAYSCALE)
-    im = cv2.resize(im, (176, 240))
-    DOG_transform(im)
+    im = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
+    # im = cv2.resize(im, (176, 240))
+    im = im/255.
+    
+    lol = on_off_filtering(im)
+    print(lol.shape)
+
+    ON = lol[0]
+    OFF = lol[1]
+
+    plt.imshow(ON)
+    plt.show()
+
+    plt.imshow(OFF)
+    plt.show()
