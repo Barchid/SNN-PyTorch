@@ -37,7 +37,8 @@ class SEWBottleneck(nn.Module):
                                bias=False,
                                dilation=dilation,
                                stride=1)
-        self.spike1 = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+        self.spike1 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
 
         self.conv2 = nn.Conv2d(out_channels, out_channels,
                                kernel_size=kernel_size,
@@ -82,6 +83,13 @@ class SEWBottleneck(nn.Module):
 
         return x
 
+    def init_leaky(self):
+        self.spike1.init_leaky()
+        self.spike2.init_leaky()
+
+        if self.downsample_spike is not None:
+            self.downsample_spike.init_leaky()
+
 
 class ResNet9(nn.Module):
     """Some Information about ResNet9"""
@@ -95,7 +103,8 @@ class ResNet9(nn.Module):
                                bias=False,
                                dilation=1,
                                stride=2)
-        self.spike1 = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+        self.spike1 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
 
         self.layer2 = SEWBottleneck(64, 64, 3, stride=2)
 
@@ -107,11 +116,11 @@ class ResNet9(nn.Module):
 
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-
         self.flat = nn.Flatten()
 
         self.fc = nn.Linear(512, out_channels, bias=False)
-        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True, output=False)
+        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
+            slope=25), init_hidden=True, output=True)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -123,13 +132,94 @@ class ResNet9(nn.Module):
         x = self.layer5(x)
 
         x = self.avg_pool(x)
-        
+
         # classifier
         x = self.flat(x)
         x = self.fc(x)
         out, mem = self.fc_spike(x)
 
         return out, mem
+
+
+class ResNet5(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, timesteps: int):
+        super(ResNet5, self).__init__()
+        self.timesteps = timesteps
+
+        self.conv1 = nn.Conv2d(in_channels, 64,
+                               kernel_size=7,
+                               padding=3,
+                               # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
+                               bias=False,
+                               dilation=1,
+                               stride=2)
+        self.spike1 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+
+        self.layer2 = SEWBottleneck(64, 64, 3, stride=2)
+
+        self.layer3 = SEWBottleneck(64, 128, 3, stride=2)
+
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.flat = nn.Flatten()
+
+        self.fc = nn.Linear(128, 32, bias=False)
+        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
+            slope=25), init_hidden=True, output=True)
+
+        self.non_spike_fc = nn.Linear(32, out_channels)
+
+    def forward(self, inputs):
+        # resets every LIF neurons
+        self.spike1.init_leaky()
+        self.layer2.init_leaky()
+        self.layer3.init_leaky()
+        self.fc_spike.init_leaky()
+
+        # spike accumulator to get the prediction
+        accumulator = 0.
+
+        for k in self.timesteps:
+            x = inputs[k, :, :, :]
+            x = self.conv1(x)
+            x = self.spike1(x)
+
+            x = self.layer2(x)
+            x = self.layer3(x)
+
+            x = self.avg_pool(x)
+
+            # classifier
+            x = self.flat(x)
+            x = self.fc(x)
+            x, _ = self.fc_spike(x)
+
+            x = self.non_spike_fc(x)
+
+            accumulator += x
+
+        return accumulator
+
+
+class SmallCNN(nn.Sequential):
+    def __init__(self, in_channels, out_channels):
+        super(SmallCNN, self).__init__()
+        beta = 0.5
+        spike_grad = surrogate.fast_sigmoid(slope=25)
+
+        self.add_module('conv1', nn.Conv2d(in_channels, 12, 5))
+        self.add_module('max1', nn.MaxPool2d(2))
+        self.add_module('spike1', snn.Leaky(
+            beta=beta, spike_grad=spike_grad, init_hidden=True))
+        self.add_module('conv2', nn.Conv2d(12, 64, 5))
+        self.add_module('max2', nn.MaxPool2d(2))
+        self.add_module('spike2', snn.Leaky(
+            beta=beta, spike_grad=spike_grad, init_hidden=True))
+        self.add_module('flattent', nn.Flatten())
+        self.add_module('linear', nn.Linear(64*4*4, 10))
+        self.add_module('spike_linear', snn.Leaky(
+            beta=beta, spike_grad=spike_grad, init_hidden=True, output=True))
 
 
 # class UNet(nn.Module):
