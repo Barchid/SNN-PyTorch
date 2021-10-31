@@ -38,7 +38,7 @@ class SEWBottleneck(nn.Module):
                                dilation=dilation,
                                stride=1)
         self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.conv2 = nn.Conv2d(out_channels, out_channels,
                                kernel_size=kernel_size,
@@ -48,7 +48,7 @@ class SEWBottleneck(nn.Module):
                                dilation=dilation,
                                stride=stride)
         self.spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # self.conv2 = ConvSpike(out_channels, out_channels,
         #                        kernel_size, dilation=dilation, stride=stride)
@@ -57,22 +57,24 @@ class SEWBottleneck(nn.Module):
             self.downsample_conv = nn.Conv2d(
                 in_channels, out_channels, 1, dilation=dilation, stride=stride)
             self.downsample_spike = snn.Leaky(
-                beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+                beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
         else:
             self.downsample_conv = None
             self.downsample_spike = None
 
-    def forward(self, x):
+    def forward(self, x, mem_1, mem_2, mem_d):
         identity = x
 
         x = self.conv1(x)
-        x = self.spike1(x)
+        x, mem_1 = self.spike1(x, mem_1)
         x = self.conv2(x)
-        x = self.spike2(x)
+        x, mem_2 = self.spike2(x, mem_2)
 
         if self.downsample_conv is not None:
             identity = self.downsample_conv(identity)
-            identity = self.downsample_spike(identity)
+            identity, mem_d = self.downsample_spike(identity, mem_d)
+        else:
+            mem_d = None
 
         if self.connect_f == 'ADD':
             x = x + identity
@@ -81,64 +83,18 @@ class SEWBottleneck(nn.Module):
         else:
             x = x * (1. - identity)
 
-        return x
+        return x, mem_1, mem_2, mem_d
 
     def init_leaky(self):
-        self.spike1.init_leaky()
-        self.spike2.init_leaky()
+        mem_1 = self.spike1.init_leaky()
+        mem_2 = self.spike2.init_leaky()
 
         if self.downsample_spike is not None:
-            self.downsample_spike.init_leaky()
+            mem_d = self.downsample_spike.init_leaky()
+        else:
+            mem_d = None
 
-
-class ResNet9(nn.Module):
-    """Some Information about ResNet9"""
-
-    def __init__(self, in_channels, out_channels):
-        super(ResNet9, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, 64,
-                               kernel_size=7,
-                               padding=3,
-                               # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
-                               dilation=1,
-                               stride=2)
-        self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
-
-        self.layer2 = SEWBottleneck(64, 64, 3, stride=2)
-
-        self.layer3 = SEWBottleneck(64, 128, 3, stride=2)
-
-        self.layer4 = SEWBottleneck(128, 256, 3, stride=2)
-
-        self.layer5 = SEWBottleneck(256, 512, 3, stride=2)
-
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-
-        self.flat = nn.Flatten()
-
-        self.fc = nn.Linear(512, out_channels, bias=False)
-        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
-            slope=25), init_hidden=True, output=True)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.spike1(x)
-
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.layer5(x)
-
-        x = self.avg_pool(x)
-
-        # classifier
-        x = self.flat(x)
-        x = self.fc(x)
-        out, mem = self.fc_spike(x)
-
-        return out, mem
+        return mem_1, mem_2, mem_d
 
 
 class ResNet5(nn.Module):
@@ -154,46 +110,114 @@ class ResNet5(nn.Module):
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=True)
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
-        self.layer2 = SEWBottleneck(64, 64, 3, stride=2)
+        # residual block 2
+        self.res2_conv1 = nn.Conv2d(64, 64,
+                                    kernel_size=3,
+                                    padding=1,
+                                    # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
+                                    bias=False,
+                                    stride=1)
+        self.res2_spike1 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
-        self.layer3 = SEWBottleneck(64, 128, 3, stride=2)
+        self.res2_conv2 = nn.Conv2d(64, 64,
+                                    kernel_size=3,
+                                    padding=1,
+                                    bias=False,
+                                    stride=2)
+        self.res2_spike2 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
+        self.res2_dconv = nn.Conv2d(64, 64, 1, stride=2)
+        self.res2_dspike = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+
+        # residual block 3
+        self.res3_conv1 = nn.Conv2d(64, 128,
+                                    kernel_size=3,
+                                    padding=1,
+                                    # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
+                                    bias=False)
+        self.res3_spike1 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+
+        self.res3_conv2 = nn.Conv2d(128, 128,
+                                    kernel_size=3,
+                                    padding=1,
+                                    bias=False,
+                                    stride=2)
+        self.res3_spike2 = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+
+        self.res3_dconv = nn.Conv2d(64, 128, 1, stride=2)
+        self.res3_dspike = snn.Leaky(
+            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+
+        # classifying layers
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
         self.flat = nn.Flatten()
 
         self.fc = nn.Linear(128, 32, bias=False)
         self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
-            slope=25), init_hidden=True, output=True)
+            slope=25), init_hidden=False, output=True)
 
         self.non_spike_fc = nn.Linear(32, out_channels)
 
     def forward(self, inputs):
         # resets every LIF neurons
-        self.spike1.init_leaky()
-        self.layer2.init_leaky()
-        self.layer3.init_leaky()
-        self.fc_spike.init_leaky()
+        mem_spike1 = self.spike1.init_leaky()
+        mem_res2_spike1 = self.res2_spike1.init_leaky()
+        mem_res2_spike2 = self.res2_spike2.init_leaky()
+        mem_res2_dspike = self.res2_dspike.init_leaky()
+        mem_res3_spike1 = self.res3_spike1.init_leaky()
+        mem_res3_spike2 = self.res3_spike2.init_leaky()
+        mem_res3_dspike = self.res3_dspike.init_leaky()
+
+        mem_fc_spike = self.fc_spike.init_leaky()
 
         # spike accumulator to get the prediction
         accumulator = 0.
 
-        for k in self.timesteps:
-            x = inputs[k, :, :, :]
+        for k in range(self.timesteps):
+            x = inputs[k, :, :, :, :]
             x = self.conv1(x)
-            x = self.spike1(x)
+            x, mem_spike1 = self.spike1(x, mem_spike1)
 
-            x = self.layer2(x)
-            x = self.layer3(x)
+            # residual block 2
+            identity = x
+            x = self.res2_conv1(x)
+            x, mem_res2_spike1 = self.res2_spike1(x, mem_res2_spike1)
+
+            x = self.res2_conv2(x)
+            x, mem_res2_spike2 = self.res2_spike2(x, mem_res2_spike2)
+
+            identity = self.res2_dconv(identity)
+            identity, mem_res2_dspike = self.res2_dspike(
+                identity, mem_res2_dspike)
+            x = x + identity
+
+            # residual block 3
+            identity = x
+            x = self.res3_conv1(x)
+            x, mem_res3_spike1 = self.res3_spike1(x, mem_res3_spike1)
+
+            x = self.res3_conv2(x)
+            x, mem_res3_spike2 = self.res3_spike2(x, mem_res3_spike2)
+
+            identity = self.res3_dconv(identity)
+            identity, mem_res3_dspike = self.res3_dspike(
+                identity, mem_res3_dspike)
+            x = x + identity
 
             x = self.avg_pool(x)
 
             # classifier
             x = self.flat(x)
             x = self.fc(x)
-            x, _ = self.fc_spike(x)
+            x, _ = self.fc_spike(x, mem_fc_spike)
 
             x = self.non_spike_fc(x)
 

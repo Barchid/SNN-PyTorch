@@ -21,7 +21,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.cuda import amp
 from torchsummary import summary
-from models.snntorch_sewresnet import ResNet5, ResNet9
+from models.snntorch_sewresnet import ResNet5
+from utils.neural_coding import neural_coding
 from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_transforms, init_oxford_dataset
 
 import snntorch as snn
@@ -60,10 +61,15 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = ResNet5(2, 4, args.timesteps)
+    model = ResNet5(
+        # if on/off filtering, there is 2 channels (else, there is 1)
+        2 if args.on_off else 1,
+        4,
+        args.timesteps
+    ).to(device)
 
     # TODO: define loss function
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = nn.SmoothL1Loss().to(device)
 
     # TODO: define optimizer
     optimizer = torch.optim.Adam(
@@ -108,7 +114,7 @@ def main():
 
     # TRAINING + VALIDATION LOOP
     for epoch in range(args.start_epoch, args.epochs):
-        adjust_learning_rate(optimizer, epoch, args)
+        # adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
         acc, loss = one_epoch(train_loader, model, criterion,
@@ -160,26 +166,25 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         # measure data loading time
         data_time.update(time.time() - end)
 
-        images = images.to(device)
+        neural_images = neural_coding(images, args)
+        neural_images = neural_images.to(device)
+        bbox = bbox.to(device)
 
-        bbox_pred = model(images)
-
-        bbox_pred = torch.clip(bbox_pred, 0., 1.)  # clips value
+        bbox_pred = model(neural_images)
 
         loss = criterion(bbox_pred, bbox)
-
-        # measure accuracy and record loss
-        # TODO: define accuracy metrics
-        iou = iou_metric(bbox_pred, bbox, args.batch_size,
-                         args.height, args.width)
-        losses.update(loss.item(), images.size(0))
-        ious.update(iou, images.size(0))
 
         # compute gradient and do SGD step (if training)
         if is_training:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+        # measure accuracy and record loss
+        iou = iou_metric(bbox_pred.detach().cpu().numpy(), bbox.detach().cpu().numpy(), images.size(0),
+                         args.height, args.width)
+        losses.update(loss.item(), images.size(0))
+        ious.update(iou, images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

@@ -17,8 +17,8 @@ def get_args():
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
-    parser.add_argument('-b', '--batch-size', default=8, type=int,
-                        metavar='N', help='mini-batch size (default: 8).')
+    parser.add_argument('-b', '--batch-size', default=1, type=int,
+                        metavar='N', help='mini-batch size (default: 1).')
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR', help='initial learning rate (default: 0.1).', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -41,7 +41,7 @@ def get_args():
 
     # SNN coding of static image
     parser.add_argument('--neural-coding', type=str,
-                        choices=['rate', 'ttfs', 'phase', 'burst'], default='rate')
+                        choices=['rate', 'ttfs', 'phase', 'burst', 'saccade', 'synchrony'], default='rate')
     parser.add_argument('--phase-weighted', action="store_true",
                         help="Weighted input spikes (used in phase neural coding)")
     parser.add_argument('--burst-n-max', type=int, default=5,
@@ -64,7 +64,7 @@ def get_args():
                         help="Distance (in pixel) of the movement for each saccade.")
 
     # random
-    parser.add_argument('--timesteps', '-t', type=int, default=100,
+    parser.add_argument('--timesteps', '-t', type=int, default=30,
                         help="Number of timesteps for one inference.")
     parser.add_argument('--height', type=int,
                         help="Height dimension of the input", default=176)
