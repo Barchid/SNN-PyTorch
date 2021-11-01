@@ -5,6 +5,7 @@ import cv2
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 
 class SAM(object):
@@ -19,7 +20,7 @@ class SAM(object):
         self.width = input_width
 
     def hook_save_spikes(self, module, input, output):
-        spikes = output.detach().cpu().numpy()
+        spikes = output[0].detach().cpu().numpy()
         self.spike_rec.append(spikes)
 
     def get_sam(self):
