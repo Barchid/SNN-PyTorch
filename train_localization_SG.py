@@ -120,6 +120,9 @@ def main():
         acc, loss = one_epoch(train_loader, model, criterion,
                               epoch, args, tensorboard_meter, optimizer=optimizer)  # TODO
 
+        if args.debug:
+            continue
+
         # evaluate on validation set (optimizer is None when validation)
         with torch.no_grad():
             acc, loss = one_epoch(
@@ -143,8 +146,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     # TODO: define AverageMeters (print some metrics at the end of the epoch)
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    ious = AverageMeter('IoU', ':6.2f')
+    losses = AverageMeter('Loss', ':6.7f')
+    ious = AverageMeter('IoU', ':6.3f')
 
     is_training = optimizer is not None
     prefix = 'TRAIN' if is_training else 'TEST'
@@ -195,6 +198,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # if debugging, stop after the first batch
         if args.debug:
+            print('PRED', bbox_pred,'\n\nGT', bbox)
             break
 
         # TODO: define AverageMeters used in tensorboard summary
