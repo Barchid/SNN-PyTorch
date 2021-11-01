@@ -19,7 +19,7 @@ def get_args():
                         help='manual epoch number (useful on restarts)')
     parser.add_argument('-b', '--batch-size', default=1, type=int,
                         metavar='N', help='mini-batch size (default: 1).')
-    parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate (default: 0.1).', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
@@ -80,5 +80,8 @@ def get_args():
                         help="If used, forces to overfit only one batch of the train split (to debug the network).")
     parser.add_argument('--mixed-precision', action="store_true",
                         help="Enables the Automatic Mixed Precision optimization from PyTorch.")
+
+    parser.add_argument('--save-sample', type=int,
+                        help="Number of sample to save to see the predictions of the model. if negative, doesn't save any sample.", default=-1)
 
     return parser.parse_args()

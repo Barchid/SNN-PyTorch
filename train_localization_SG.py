@@ -6,7 +6,7 @@ import time
 from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
-from utils.localization_utils import iou_metric
+from utils.localization_utils import draw_bbox, format_bbox, iou, iou_metric
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args_snntorch import get_args
 import warnings
@@ -21,7 +21,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.cuda import amp
 from torchsummary import summary
-from models.snntorch_sewresnet import ResNet5
+from models.snntorch_sewresnet import ResNet5, ResNet9
 from utils.neural_coding import neural_coding
 from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_transforms, init_oxford_dataset
 
@@ -31,6 +31,7 @@ from snntorch import backprop
 from snntorch import functional as SF
 from snntorch import utils
 from snntorch import spikeplot as splt
+import matplotlib.pyplot as plt
 
 
 # GPU if available (or CPU instead)
@@ -61,7 +62,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = ResNet5(
+    model = ResNet9(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
@@ -196,11 +197,15 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         if i % args.print_freq == 0:
             progress.display(i)
             if args.debug:
-                print('PRED', bbox_pred[0],'\n\nGT', bbox[0])
+                print('PRED', bbox_pred[0], '\n\nGT', bbox[0])
 
         # if debugging, stop after the first batch
         if args.debug:
             break
+
+        # save sample if required (only in test phase)
+        if not is_training and i == args.save_sample:
+            save_sample(bbox_pred, bbox, images, epoch, args)
 
         # TODO: define AverageMeters used in tensorboard summary
         if is_training:
@@ -209,6 +214,37 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
             tensorboard_meter.update_val([ious, losses], epoch)
 
     return ious.avg, losses.avg  # TODO
+
+
+def save_sample(bbox_pred, bbox_gt, image, epoch, args):
+    # always the first image in the batch
+    image = image.detach().cpu().numpy()[0]
+    bbox_pred = bbox_pred.detach().cpu().numpy()[0]
+    bbox_gt = bbox_gt.detach().cpu().numpy()[0]
+
+    parent_dir = os.path.join('experiments', args.experiment, 'samples')
+    if not os.path.exists(parent_dir):
+        os.mkdir(parent_dir)
+
+    # IoU computation
+    pred = format_bbox(bbox_pred, args.height, args.width)
+    gt = format_bbox(bbox_gt, args.height, args.width)
+    IoU = iou(pred, gt)
+
+    filename = os.path.join(
+        parent_dir, f"ep{str(epoch).zfill(4)}_iou{IoU}.png")
+
+    # draw bbox on the image
+    image = image[0]  # get rid of useless channel
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    im_pred = draw_bbox(image, pred)
+    im_gt = draw_bbox(image, gt)
+    title = f"IoU = {IoU}"
+    fig.suptitle(title)
+    ax1.imshow(im_pred)
+    ax2.imshow(im_gt)
+    plt.savefig(filename)
+    plt.close()
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
