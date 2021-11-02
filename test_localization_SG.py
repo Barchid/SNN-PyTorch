@@ -123,14 +123,16 @@ def main():
     cudnn.benchmark = True
 
     # TODO: dataloaders code
-    _, val_loader = get_dataloaders(args)
+    train_loader, val_loader = get_dataloaders(args)
+
+    data_loader = train_loader if args.debug else val_loader
 
     with torch.no_grad():
         _, _, _ = one_epoch(val_loader, model, criterion,
                             0, args, sams=get_SAM(model, args))
 
 
-def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, sams={}):
+def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
     """One epoch pass. If the optimizer is not None, the function works in training mode. 
     """
     # TODO: define AverageMeters (print some metrics at the end of the epoch)
@@ -186,6 +188,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         progress.display(i)
 
+        if args.debug:
+            break
+
     return ious.avg, losses.avg  # TODO
 
 
@@ -220,7 +225,7 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
         train_images_filenames,
         images_directory,
         masks_directory,
-        transform=transform_train,
+        transform=transform_train if not args.debug else transform_val,
         use_DOG=args.on_off,  # TODO
     )
 
