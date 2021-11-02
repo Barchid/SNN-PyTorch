@@ -102,7 +102,7 @@ def format_bbox(bbox, HEIGHT, WIDTH):
 
 def draw_bbox(image, bbox):
     im = np.copy(image)
-    print(im.shape, bbox)
+    print(im.shape, type(bbox[0]))
     x_min, y_min, x_max, y_max = bbox[0], bbox[1], bbox[2], bbox[3]
     return cv2.rectangle(
         im, (x_min, y_min), (x_max, y_max), color=(0.5), thickness=4
