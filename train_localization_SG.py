@@ -201,6 +201,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # if debugging, stop after the first batch
         if args.debug:
+            save_sample(bbox_pred, bbox, images, epoch, args)
             break
 
         # save sample if required (only in test phase)
