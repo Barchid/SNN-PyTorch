@@ -233,7 +233,7 @@ def save_sample(bbox_pred, bbox_gt, image, epoch, args):
     IoU = iou(pred, gt)
 
     filename = os.path.join(
-        parent_dir, f"ep{str(epoch).zfill(4)}_iou{IoU}.png")
+        parent_dir, f"ep{str(epoch).zfill(4)}_iou{IoU:3.2f}.png")
 
     # draw bbox on the image
     image = image[0]  # get rid of useless channel
@@ -280,7 +280,7 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
         train_images_filenames,
         images_directory,
         masks_directory,
-        transform=transform_train,
+        transform=transform_train if args.debug else None,
         use_DOG=args.on_off,  # TODO
     )
 
