@@ -172,7 +172,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
             # take only the heatmap of the first image in the batch
             heatmaps = [hm[0] for hm in heatmaps]
             heatmap_video(images.detach().cpu().numpy()[0], heatmaps, os.path.join(
-                'experiments', args.experiment, 'SAMS', f"{name}____b{i:6.1f}.mp4"))
+                'experiments', args.experiment, 'SAMS', f"{name}____b{i:6.1f}.avi"))
 
         loss = criterion(bbox_pred, bbox)
 
