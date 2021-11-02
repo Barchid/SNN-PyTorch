@@ -122,6 +122,7 @@ def main():
                               epoch, args, tensorboard_meter, optimizer=optimizer)  # TODO
 
         if args.debug:
+            best_acc = acc
             continue
 
         # evaluate on validation set (optimizer is None when validation)
@@ -139,6 +140,14 @@ def main():
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
         }, is_best, filename=f'experiments/{args.experiment}/checkpoint_{str(epoch).zfill(5)}.pth.tar')
+
+    # save the debugged model at the end of the script
+    save_checkpoint({
+        'epoch': 0,
+        'state_dict': model.state_dict(),
+        'best_acc': best_acc,
+        'optimizer': optimizer.state_dict(),
+    }, is_best, filename=f'experiments/{args.experiment}/debug.pth.tar')
 
 
 def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, optimizer=None):
