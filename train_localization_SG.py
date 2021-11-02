@@ -235,7 +235,6 @@ def save_sample(bbox_pred, bbox_gt, image, epoch, args):
 
     # draw bbox on the image
     image = image[0]  # get rid of useless channel
-    print(image.shape)
     fig, (ax1, ax2) = plt.subplots(1, 2)
     im_pred = draw_bbox(image, pred)
     im_gt = draw_bbox(image, gt)
