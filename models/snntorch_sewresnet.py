@@ -217,7 +217,7 @@ class ResNet5(nn.Module):
             # classifier
             x = self.flat(x)
             x = self.fc(x)
-            x, _ = self.fc_spike(x, mem_fc_spike)
+            x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
             x = self.final(x)
 
@@ -424,7 +424,7 @@ class ResNet9(nn.Module):
             # classifier
             x = self.flat(x)
             x = self.fc(x)
-            x, _ = self.fc_spike(x, mem_fc_spike)
+            x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
             x = self.final(x)
 
