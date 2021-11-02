@@ -6,7 +6,7 @@ import time
 from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
-from utils.SAM_hook import SAM
+from utils.SAM_hook import SAM, heatmap_video
 from utils.localization_utils import iou_metric
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args_snntorch import get_args
@@ -169,7 +169,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
             heatmaps = sam.get_sam()
             # take only the heatmap of the first image in the batch
             heatmaps = [hm[0] for hm in heatmaps]
-            sam.heatmap_video(images.detach().cpu().numpy()[0], heatmaps, os.path.join(
+            heatmap_video(images.detach().cpu().numpy()[0], heatmaps, os.path.join(
                 'experiments', args.experiment, 'SAMS', f"{name}____b{i:6.1f}.mp4"))
 
         loss = criterion(bbox_pred, bbox)
