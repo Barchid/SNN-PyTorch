@@ -75,6 +75,9 @@ def heatmap_video(original_image: np.ndarray, heatmaps: List[np.ndarray], filena
     for heatmap in heatmaps:
         img_heatmap = show_cam_on_image(original_image, heatmap, use_rgb=True)
 
+        # plt.imsave('test.png', img_heatmap)
+        # plt.show()
+
         ax.imshow(img_heatmap)
         camera.snap()
 
@@ -96,6 +99,7 @@ def show_cam_on_image(img: np.ndarray,
     :returns: The default image with the cam overlay.
     """
     heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
+    print(np.unique(np.uint8(255 * mask)))
     if use_rgb:
         heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     heatmap = np.float32(heatmap) / 255
@@ -109,4 +113,8 @@ def show_cam_on_image(img: np.ndarray,
 
     cam = heatmap + img
     cam = cam / np.max(cam)
+    print('\nHEATMAP')
+    print(heatmap)
+    print('\nCAM')
+    print(cam)
     return np.uint8(255 * cam)

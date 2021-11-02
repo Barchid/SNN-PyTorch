@@ -189,7 +189,8 @@ def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
         progress.display(i)
 
         if args.debug:
-            break
+            print(f'\nPRED={bbox_pred[0]}\nGT={bbox[0]}')
+            return iou, loss
 
     return ious.avg, losses.avg  # TODO
 
