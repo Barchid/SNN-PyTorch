@@ -196,8 +196,6 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         if i % args.print_freq == 0:
             progress.display(i)
-            if args.debug:
-                print('PRED', bbox_pred[0], '\n\nGT', bbox[0])
 
         # if debugging, stop after the first batch
         if args.debug:
