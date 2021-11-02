@@ -6,6 +6,7 @@ import time
 from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
+from utils.SAM_hook import SAM
 from utils.localization_utils import iou_metric
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args_snntorch import get_args
@@ -38,6 +39,22 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # SAM hyperparameter
 GAMMA = 0.4
+
+
+def get_SAM(model, args):
+    spike1 = SAM(model.spike1, args.height, args.width)
+    res2_spike1 = SAM(model.res2_spike1, args.height, args.width)
+    res2_spike2 = SAM(model.res2_spike2, args.height, args.width)
+    res3_spike1 = SAM(model.res3_spike1, args.height, args.width)
+    res3_spike2 = SAM(model.res3_spike2, args.height, args.width)
+
+    return {
+        'spike1': spike1,
+        'res2_spike1': res2_spike1,
+        'res2_spike2': res2_spike2,
+        'res3_spike1': res3_spike1,
+        'res3_spike2': res3_spike2
+    }
 
 
 def main():
@@ -100,13 +117,12 @@ def main():
     # TODO: dataloaders code
     _, val_loader = get_dataloaders(args)
 
-    # If only evaluating the model is required
     with torch.no_grad():
-        
-        _, _, _ = one_epoch(val_loader, model, criterion, 0, args, optimizer=None)
+        _, _, _ = one_epoch(val_loader, model, criterion,
+                            0, args, sams=get_SAM(model, args))
 
 
-def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, optimizer=None):
+def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, sams={}):
     """One epoch pass. If the optimizer is not None, the function works in training mode. 
     """
     # TODO: define AverageMeters (print some metrics at the end of the epoch)
@@ -115,8 +131,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
     losses = AverageMeter('Loss', ':6.7f')
     ious = AverageMeter('IoU', ':6.3f')
 
-    is_training = optimizer is not None
-    prefix = 'TRAIN' if is_training else 'TEST'
+    prefix = 'TEST'
 
     # TODO: final Progress Meter (add the relevant AverageMeters)
     progress = ProgressMeter(
@@ -125,10 +140,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         prefix=f"{prefix} - Epoch: [{epoch}]")
 
     # switch to train mode (if training)
-    if is_training:
-        model.train()
-    else:
-        model.eval()
+    model.eval()
 
     end = time.time()
     for i, (images, class_id, bbox) in enumerate(dataloader):
@@ -141,13 +153,18 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         bbox_pred = model(neural_images)
 
-        loss = criterion(bbox_pred, bbox)
+        # save the SAMs output of the first image in the batch
+        if not os.path.exists(os.path.join('experiments', args.experiment, 'SAMS')):
+            os.mkdir(os.path.join('experiments', args.experiment, 'SAMS'))
 
-        # compute gradient and do SGD step (if training)
-        if is_training:
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        for name, sam in sams.items():
+            heatmaps = sam.get_sam()
+            # take only the heatmap of the first image in the batch
+            heatmaps = [hm[0] for hm in heatmaps]
+            sam.heatmap_video(images.detach().cpu().numpy()[0], heatmaps, os.path.join(
+                'experiments', args.experiment, 'SAMS', f"{name}____b{i:6.1f}.mp4"))
+
+        loss = criterion(bbox_pred, bbox)
 
         # measure accuracy and record loss
         iou = iou_metric(bbox_pred.detach().cpu().numpy(), bbox.detach().cpu().numpy(), images.size(0),
@@ -159,20 +176,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
-            progress.display(i)
-            if args.debug:
-                print('PRED', bbox_pred[0],'\n\nGT', bbox[0])
-
-        # if debugging, stop after the first batch
-        if args.debug:
-            break
-
-        # TODO: define AverageMeters used in tensorboard summary
-        if is_training:
-            tensorboard_meter.update_train([ious, losses])
-        else:
-            tensorboard_meter.update_val([ious, losses], epoch)
+        progress.display(i)
 
     return ious.avg, losses.avg  # TODO
 
