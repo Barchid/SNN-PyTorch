@@ -104,6 +104,8 @@ def show_cam_on_image(img: np.ndarray,
         raise Exception(
             "The input image should np.float32 in the range [0, 1]")
 
+    
+
     cam = heatmap + img
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
