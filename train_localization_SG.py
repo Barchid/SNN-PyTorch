@@ -148,7 +148,7 @@ def main():
             'state_dict': model.state_dict(),
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
-        }, is_best, filename=f'experiments/{args.experiment}/debug.pth.tar')
+        }, is_best=False, filename=f'experiments/{args.experiment}/debug.pth.tar')
 
 
 def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: TensorboardMeter = None, optimizer=None):
