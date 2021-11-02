@@ -104,7 +104,8 @@ def show_cam_on_image(img: np.ndarray,
         raise Exception(
             "The input image should np.float32 in the range [0, 1]")
 
-    
+    img = np.squeeze(img) # squeeze if needed
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
     cam = heatmap + img
     cam = cam / np.max(cam)

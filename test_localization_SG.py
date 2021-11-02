@@ -168,7 +168,6 @@ def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
             os.mkdir(os.path.join('experiments', args.experiment, 'SAMS'))
 
         for name, sam in sams.items():
-            print(images.shape)
             heatmaps = sam.get_sam()
             # take only the heatmap of the first image in the batch
             heatmaps = [hm[0] for hm in heatmaps]
