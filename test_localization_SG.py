@@ -22,7 +22,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.cuda import amp
 from torchsummary import summary
-from models.snntorch_sewresnet import ResNet5
+from models.snntorch_sewresnet import ResNet5, ResNet9
 from utils.neural_coding import neural_coding
 from utils.oxford_iiit_pet_loader import OxfordPetDatasetLocalization, get_transforms, init_oxford_dataset
 
@@ -41,19 +41,27 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 GAMMA = 0.4
 
 
-def get_SAM(model, args):
+def get_SAM(model: ResNet9, args):
     spike1 = SAM(model.spike1, args.height, args.width)
     res2_spike1 = SAM(model.res2_spike1, args.height, args.width)
     res2_spike2 = SAM(model.res2_spike2, args.height, args.width)
     res3_spike1 = SAM(model.res3_spike1, args.height, args.width)
     res3_spike2 = SAM(model.res3_spike2, args.height, args.width)
+    res4_spike1 = SAM(model.res4_spike1, args.height, args.width)
+    res4_spike2 = SAM(model.res4_spike2, args.height, args.width)
+    res5_spike1 = SAM(model.res5_spike1, args.height, args.width)
+    res5_spike2 = SAM(model.res5_spike2, args.height, args.width)
 
     return {
         'spike1': spike1,
         'res2_spike1': res2_spike1,
         'res2_spike2': res2_spike2,
         'res3_spike1': res3_spike1,
-        'res3_spike2': res3_spike2
+        'res3_spike2': res3_spike2,
+        'res4_spike1': res4_spike1,
+        'res4_spike2': res4_spike2,
+        'res5_spike1': res5_spike1,
+        'res5_spike2': res5_spike2
     }
 
 
@@ -81,7 +89,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = ResNet5(
+    model = ResNet9(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
