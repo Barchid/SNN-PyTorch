@@ -278,7 +278,7 @@ def get_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
         train_images_filenames,
         images_directory,
         masks_directory,
-        transform=transform_train if not args.debug else None,
+        transform=transform_train if not args.debug else transform_val,
         use_DOG=args.on_off,  # TODO
     )
 
