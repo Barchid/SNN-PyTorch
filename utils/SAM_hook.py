@@ -67,7 +67,7 @@ class SAM(object):
         self.hook.remove()
 
 
-def get_heatmap_video(original_image: np.ndarray, heatmaps: List[np.ndarray], filename: str):
+def heatmap_video(original_image: np.ndarray, heatmaps: List[np.ndarray], filename: str):
     fig, ax = plt.subplots()
     camera = Camera(fig)
     plt.axis("off")
