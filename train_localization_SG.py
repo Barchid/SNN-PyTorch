@@ -4,6 +4,7 @@ import random
 import shutil
 import time
 from typing import Tuple
+from torch.nn.functional import smooth_l1_loss
 
 from torch.utils.data.dataloader import DataLoader
 from models.snntorch_baseline import Baseline5
@@ -64,7 +65,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = Baseline5(
+    model = ResNet9(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
@@ -73,7 +74,7 @@ def main():
 
     # TODO: define loss function
     # criterion = nn.SmoothL1Loss().to(device)
-    criterion = DIoULoss().to(device)
+    criterion = nn.SmoothL1Loss().to(device)
 
     # TODO: define optimizer
     optimizer = torch.optim.Adam(
