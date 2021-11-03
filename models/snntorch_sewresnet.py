@@ -430,4 +430,4 @@ class ResNet9(nn.Module):
 
             accumulator += x
 
-        return accumulator
+        return torch.sigmoid(accumulator)
