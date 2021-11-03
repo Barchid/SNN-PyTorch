@@ -70,7 +70,7 @@ class Baseline5(nn.Module):
         self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(32, out_channels)
+        self.final = nn.Linear(128, out_channels)
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -101,6 +101,8 @@ class Baseline5(nn.Module):
 
             x = self.conv5(x)
             x, mem_spike5 = self.spike5(x, mem_spike5)
+
+            x = self.avg_pool(x)
 
             # classifier
             x = self.flat(x)

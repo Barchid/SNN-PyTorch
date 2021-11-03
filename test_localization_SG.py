@@ -71,7 +71,7 @@ def main():
 
     args = get_args()
 
-    # batch size is 1 for testing
+    # batch size is forced to 1
     args.batch_size = 1
 
     if args.seed is not None:

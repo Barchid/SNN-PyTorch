@@ -6,6 +6,7 @@ import time
 from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
+from models.snntorch_baseline import Baseline5
 from utils.diou_loss import DIoULoss, compute_IoU
 from utils.localization_utils import draw_bbox, format_bbox, iou
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
@@ -63,7 +64,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = ResNet9(
+    model = Baseline5(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
