@@ -6,7 +6,8 @@ import time
 from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
-from utils.localization_utils import draw_bbox, format_bbox, iou, iou_metric
+from utils.diou_loss import DIoULoss, compute_IoU
+from utils.localization_utils import draw_bbox, format_bbox, iou
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args_snntorch import get_args
 import warnings
@@ -70,7 +71,8 @@ def main():
     ).to(device)
 
     # TODO: define loss function
-    criterion = nn.SmoothL1Loss().to(device)
+    # criterion = nn.SmoothL1Loss().to(device)
+    criterion = DIoULoss().to(device)
 
     # TODO: define optimizer
     optimizer = torch.optim.Adam(
@@ -186,6 +188,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         bbox_pred = model(neural_images)
 
+        # loss = criterion(bbox_pred, bbox)
         loss = criterion(bbox_pred, bbox)
 
         # compute gradient and do SGD step (if training)
@@ -195,10 +198,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
             optimizer.step()
 
         # measure accuracy and record loss
-        iou = iou_metric(bbox_pred.detach().cpu().numpy(), bbox.detach().cpu().numpy(), images.size(0),
-                         args.height, args.width)
+        iou = compute_IoU(bbox_pred.detach().cpu(), bbox.detach().cpu())
         losses.update(loss.item(), images.size(0))
-        ious.update(iou, images.size(0))
+        ious.update(iou.item(), images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

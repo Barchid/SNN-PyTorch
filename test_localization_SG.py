@@ -7,7 +7,7 @@ from typing import Tuple
 
 from torch.utils.data.dataloader import DataLoader
 from utils.SAM_hook import SAM, heatmap_video
-from utils.localization_utils import iou_metric
+from utils.diou_loss import DIoULoss, compute_IoU
 from utils.meters import AverageMeter, ProgressMeter, TensorboardMeter
 from utils.args_snntorch import get_args
 import warnings
@@ -97,7 +97,7 @@ def main():
     ).to(device)
 
     # TODO: define loss function
-    criterion = nn.SmoothL1Loss().to(device)
+    criterion = DIoULoss().to(device)
 
     # TODO: define optimizer
     optimizer = torch.optim.Adam(
@@ -128,8 +128,8 @@ def main():
     data_loader = train_loader if args.debug else val_loader
 
     with torch.no_grad():
-        _, _, _ = one_epoch(val_loader, model, criterion,
-                            0, args, sams=get_SAM(model, args))
+        _, _ = one_epoch(val_loader, model, criterion,
+                         0, args, sams=get_SAM(model, args))
 
 
 def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
@@ -177,10 +177,9 @@ def one_epoch(dataloader, model, criterion, epoch, args, sams={}):
         loss = criterion(bbox_pred, bbox)
 
         # measure accuracy and record loss
-        iou = iou_metric(bbox_pred.detach().cpu().numpy(), bbox.detach().cpu().numpy(), images.size(0),
-                         args.height, args.width)
+        iou = compute_IoU(bbox_pred.detach().cpu(), bbox.detach().cpu())
         losses.update(loss.item(), images.size(0))
-        ious.update(iou, images.size(0))
+        ious.update(iou.item(), images.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
