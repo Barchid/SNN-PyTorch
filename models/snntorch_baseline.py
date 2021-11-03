@@ -114,4 +114,4 @@ class Baseline5(nn.Module):
 
             accumulator += x
 
-        return accumulator
+        return torch.sigmoid(accumulator)
