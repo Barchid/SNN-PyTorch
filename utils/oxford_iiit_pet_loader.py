@@ -4,6 +4,7 @@ import random
 import os
 import shutil
 from urllib.request import urlretrieve
+from albumentations.core.transforms_interface import ImageOnlyTransform
 from numpy.lib.utils import _makenamedict
 import torch
 import cv2
@@ -173,20 +174,64 @@ def DOG_transform(image, sigma1=1.0, sigma2=4.0, kernel_size=7):
 
     return DOG
 
+
 def on_off_filtering(image, sigma_center=1.0, sigma_surround=4.0, kernel_size=7):
     G_center = cv2.GaussianBlur(image, (kernel_size, kernel_size),
-                          sigmaX=sigma_center, sigmaY=sigma_center)
+                                sigmaX=sigma_center, sigmaY=sigma_center)
     G_surround = cv2.GaussianBlur(image, (kernel_size, kernel_size),
-                          sigmaX=sigma_surround, sigmaY=sigma_surround)
+                                  sigmaX=sigma_surround, sigmaY=sigma_surround)
     DOG = G_center - G_surround
 
     ON = np.clip(DOG, 0., None)
     OFF = np.clip(-DOG, 0., None)
+    return np.stack([ON, OFF], axis=2).astype(np.uint8)
 
-    return np.stack([ON, OFF], axis=0)
+# class OnOffFiltering(ImageOnlyTransform):
+#     def __init__(self,  sigma_center=1.0, sigma_surround=4.0, kernel_size=7):
+#         self.name = name
+#         self.age = age
 
 
-def get_transforms(height, width, is_training=False, is_grayscale=True):
+def noisy(image, noise_typ: str = "gauss", sigma: float = 0.15):
+    if noise_typ == "gauss":
+        row, col, ch = image.shape
+        mean = 0
+        gauss = np.random.normal(
+            mean, sigma, (row, col, ch)).astype(np.float32)
+        gauss = gauss.reshape(row, col, ch)
+        noisy = image + gauss
+        return noisy
+    elif noise_typ == "s&p":
+        row, col, ch = image.shape
+        s_vs_p = 0.5
+        amount = 0.004
+        out = np.copy(image)
+        # Salt mode
+        num_salt = np.ceil(amount * image.size * s_vs_p)
+        coords = [np.random.randint(0, i - 1, int(num_salt))
+                  for i in image.shape]
+        out[coords] = 1
+
+        # Pepper mode
+        num_pepper = np.ceil(amount * image.size * (1. - s_vs_p))
+        coords = [np.random.randint(0, i - 1, int(num_pepper))
+                  for i in image.shape]
+        out[coords] = 0
+        return out
+    elif noise_typ == "poisson":
+        vals = len(np.unique(image))
+        vals = 2 ** np.ceil(np.log2(vals))
+        noisy = np.random.poisson(image * vals) / float(vals)
+        return noisy
+    elif noise_typ == "speckle":
+        row, col, ch = image.shape
+        gauss = np.random.randn(row, col, ch)
+        gauss = gauss.reshape(row, col, ch)
+        noisy = image + image * gauss
+        return noisy
+
+
+def get_transforms(height, width, is_training=False, is_grayscale=True, val_gauss_sigma=None):
     if is_training:
         return A.Compose(
             [
@@ -201,15 +246,19 @@ def get_transforms(height, width, is_training=False, is_grayscale=True):
             ]
         )
     else:
+        transf = [
+            A.Resize(height, width),
+            A.Normalize(
+                mean=(0.) if is_grayscale else (0.485, 0.456, 0.406),
+                std=(1.) if is_grayscale else (0.229, 0.224, 0.225),
+            ),
+            ToTensorV2(),
+        ]
+        if val_gauss_sigma is not None:
+            transf.extend(
+                [A.GaussNoise(var_limit=[val_gauss_sigma**2, val_gauss_sigma**2], p=1.)])
         return A.Compose(
-            [
-                A.Resize(height, width),
-                A.Normalize(
-                    mean=(0.) if is_grayscale else (0.485, 0.456, 0.406),
-                    std=(1.) if is_grayscale else (0.229, 0.224, 0.225),
-                ),
-                ToTensorV2(),
-            ]
+            transf
         )
 
 ################################################################################################################
@@ -303,7 +352,9 @@ class OxfordPetDatasetLocalization(Dataset):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if self.use_DOG:
+            print(image.shape)
             image = on_off_filtering(image)
+            print(image.shape)
 
         # get class from classes directory
         class_id = get_class_from_filename(image_filename)
@@ -380,7 +431,7 @@ if __name__ == "__main__":
     im = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
     # im = cv2.resize(im, (176, 240))
     im = im/255.
-    
+
     lol = on_off_filtering(im)
     print(lol.shape)
 
