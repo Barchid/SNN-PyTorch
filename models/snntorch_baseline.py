@@ -66,11 +66,11 @@ class Baseline5(nn.Module):
 
         self.flat = nn.Flatten()
         self.dropout = nn.Dropout()
-        self.fc = nn.Linear(512, 128, bias=False)
+        self.fc = nn.Linear(512, out_channels, bias=False)
         self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(128, out_channels, bias=False)
+        # self.final = nn.Linear(128, out_channels, bias=False)
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -82,8 +82,8 @@ class Baseline5(nn.Module):
 
         mem_fc_spike = self.fc_spike.init_leaky()
 
-        # spike accumulator to get the prediction
-        accumulator = 0.
+        # mem accumulator to get the prediction
+        accumulator = []
 
         for k in range(self.timesteps):
             x = inputs[k, :, :, :, :]
@@ -110,8 +110,8 @@ class Baseline5(nn.Module):
             x = self.fc(x)
             x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
-            x = self.final(x)
+            # x = self.final(x)
 
-            accumulator += x
+            accumulator.append(mem_fc_spike)
 
-        return torch.sigmoid(accumulator)
+        return accumulator

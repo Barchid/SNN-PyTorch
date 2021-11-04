@@ -65,7 +65,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = ResNet9(
+    model = Baseline5(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
