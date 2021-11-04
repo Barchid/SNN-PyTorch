@@ -139,7 +139,7 @@ def main():
     data_loader = train_loader if args.debug else val_loader
 
     with torch.no_grad():
-        _, _ = one_epoch(val_loader, model, criterion,
+        _, _ = one_epoch(data_loader, model, criterion,
                          0, args, sams=get_SAM(model, args))
 
 
