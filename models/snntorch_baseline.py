@@ -19,7 +19,7 @@ class Baseline5(nn.Module):
                                kernel_size=7,
                                padding=3,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
@@ -30,7 +30,7 @@ class Baseline5(nn.Module):
                                kernel_size=3,
                                padding=1,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                stride=2)
         self.spike2 = snn.Leaky(
             beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -38,7 +38,7 @@ class Baseline5(nn.Module):
         self.conv3 = nn.Conv2d(64, 128,
                                kernel_size=3,
                                padding=1,
-                               bias=False,
+                               bias=True,
                                stride=2)
         self.spike3 = snn.Leaky(
             beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -48,7 +48,7 @@ class Baseline5(nn.Module):
                                kernel_size=3,
                                padding=1,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                stride=2)
         self.spike4 = snn.Leaky(
             beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -56,7 +56,7 @@ class Baseline5(nn.Module):
         self.conv5 = nn.Conv2d(256, 512,
                                kernel_size=3,
                                padding=1,
-                               bias=False,
+                               bias=True,
                                stride=2)
         self.spike5 = snn.Leaky(
             beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -66,11 +66,11 @@ class Baseline5(nn.Module):
 
         self.flat = nn.Flatten()
         self.dropout = nn.Dropout()
-        self.fc = nn.Linear(512, out_channels, bias=False)
+        self.fc = nn.Linear(512, out_channels, bias=True)
         self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        # self.final = nn.Linear(128, out_channels, bias=False)
+        # self.final = nn.Linear(128, out_channels, bias=True)
 
     def forward(self, inputs):
         # resets every LIF neurons
