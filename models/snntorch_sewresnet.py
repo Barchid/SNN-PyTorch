@@ -427,7 +427,7 @@ class ResNet9(nn.Module):
             x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
             accumulator += x
-        # print(torch.count_nonzero(accumulator.clone().))
+        print(torch.count_nonzero(accumulator.clone().detach()))
         output = self.final(accumulator)
 
         # print(accumulator)
