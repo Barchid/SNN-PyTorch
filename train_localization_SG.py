@@ -188,15 +188,18 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         neural_images = neural_images.to(device)
         bbox = bbox.to(device)
 
-        bbox_pred = model(neural_images)
+        bbox_preds = model(neural_images)
 
         # loss = criterion(bbox_pred, bbox)
-        loss = criterion(bbox_pred, bbox)
+        final_loss = torch.Tensor(0.).to(device)
+        for bbox_pred in bbox_preds:
+            loss = criterion(bbox_pred, bbox)
+            final_loss += loss
 
         # compute gradient and do SGD step (if training)
         if is_training:
             optimizer.zero_grad()
-            loss.backward()
+            final_loss.backward()
             optimizer.step()
 
         # measure accuracy and record loss

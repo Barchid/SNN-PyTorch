@@ -360,7 +360,7 @@ class ResNet9(nn.Module):
         mem_fc_spike = self.fc_spike.init_leaky()
 
         # spike accumulator to get the prediction
-        accumulator = 0.
+        accumulator = []
 
         for k in range(self.timesteps):
             x = inputs[k, :, :, :, :]
@@ -427,7 +427,7 @@ class ResNet9(nn.Module):
 
             x = self.final(x)
 
-            accumulator += x
+            accumulator.append(x)
 
         # print(accumulator / self.timesteps)
-        return accumulator / self.timesteps
+        return accumulator
