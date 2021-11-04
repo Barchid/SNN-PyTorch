@@ -83,7 +83,7 @@ def main():
     args.batch_size = 1
 
     # TODO
-    args.neural_coding = 'saccade'
+    # args.neural_coding = 'saccade'
 
     if args.seed is not None:
         random.seed(args.seed)
