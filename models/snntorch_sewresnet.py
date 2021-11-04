@@ -410,9 +410,6 @@ class ResNet9(nn.Module):
             identity = x
             x = self.res5_conv1(x)
             x, mem_res5_spike1 = self.res5_spike1(x, mem_res5_spike1)
-
-            print('\n', torch.count_nonzero(x.clone().detach().cpu()))
-
             x = self.res5_conv2(x)
             x, mem_res5_spike2 = self.res5_spike2(x, mem_res5_spike2)
 
