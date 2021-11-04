@@ -224,8 +224,6 @@ class ResNet5(nn.Module):
 
             accumulator += x
 
-        print(accumulator)
-        print(self.final.weight, '\n\n')
         return accumulator
 
 
@@ -338,7 +336,8 @@ class ResNet9(nn.Module):
         self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(64, out_channels, bias=True)
+        self.final = nn.Linear(64, out_channels, bias=False)
+        self.final.weight.requires_grad = False
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -433,4 +432,6 @@ class ResNet9(nn.Module):
             accumulator += x
 
         # print(accumulator / self.timesteps)
+        print(accumulator)
+        print(self.final.weight, '\n\n')
         return accumulator / self.timesteps
