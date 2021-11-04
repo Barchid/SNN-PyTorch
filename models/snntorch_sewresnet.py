@@ -432,5 +432,5 @@ class ResNet9(nn.Module):
 
             accumulator += x
 
-        print(accumulator)
+        # print(accumulator)
         return torch.sigmoid(accumulator)
