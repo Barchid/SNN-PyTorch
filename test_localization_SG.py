@@ -61,15 +61,15 @@ def get_SAM(model: ResNet9, args):
                       args.height, args.width)
 
     return {
-        # 'spike1': spike1,
-        # 'res2_spike1': res2_spike1,
-        # 'res2_spike2': res2_spike2,
-        # 'res3_spike1': res3_spike1,
-        # 'res3_spike2': res3_spike2,
-        # 'res4_spike1': res4_spike1,
+        'spike1': spike1,
+        'res2_spike1': res2_spike1,
+        'res2_spike2': res2_spike2,
+        'res3_spike1': res3_spike1,
+        'res3_spike2': res3_spike2,
+        'res4_spike1': res4_spike1,
         'res4_spike2': res4_spike2,
-        # 'res5_spike1': res5_spike1,
-        # 'res5_spike2': res5_spike2
+        'res5_spike1': res5_spike1,
+        'res5_spike2': res5_spike2
     }
 
 
