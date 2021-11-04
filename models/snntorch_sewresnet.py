@@ -38,7 +38,7 @@ class SEWBottleneck(nn.Module):
                                dilation=dilation,
                                stride=1)
         self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.conv2 = nn.Conv2d(out_channels, out_channels,
                                kernel_size=kernel_size,
@@ -48,7 +48,7 @@ class SEWBottleneck(nn.Module):
                                dilation=dilation,
                                stride=stride)
         self.spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # self.conv2 = ConvSpike(out_channels, out_channels,
         #                        kernel_size, dilation=dilation, stride=stride)
@@ -57,7 +57,7 @@ class SEWBottleneck(nn.Module):
             self.downsample_conv = nn.Conv2d(
                 in_channels, out_channels, 1, dilation=dilation, stride=stride)
             self.downsample_spike = snn.Leaky(
-                beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+                beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
         else:
             self.downsample_conv = None
             self.downsample_spike = None
@@ -110,7 +110,7 @@ class ResNet5(nn.Module):
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 2
         self.res2_conv1 = nn.Conv2d(64, 64,
@@ -120,7 +120,7 @@ class ResNet5(nn.Module):
                                     bias=False,
                                     stride=1)
         self.res2_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res2_conv2 = nn.Conv2d(64, 64,
                                     kernel_size=3,
@@ -128,11 +128,11 @@ class ResNet5(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res2_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res2_dconv = nn.Conv2d(64, 64, 1, stride=2)
         self.res2_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 3
         self.res3_conv1 = nn.Conv2d(64, 128,
@@ -141,7 +141,7 @@ class ResNet5(nn.Module):
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
                                     bias=False)
         self.res3_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_conv2 = nn.Conv2d(128, 128,
                                     kernel_size=3,
@@ -149,11 +149,11 @@ class ResNet5(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res3_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_dconv = nn.Conv2d(64, 128, 1, stride=2)
         self.res3_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # classifying layers
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -161,7 +161,7 @@ class ResNet5(nn.Module):
         self.flat = nn.Flatten()
 
         self.fc = nn.Linear(128, 32, bias=False)
-        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
+        self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
         self.final = nn.Linear(32, out_channels)
@@ -239,7 +239,7 @@ class ResNet9(nn.Module):
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 2
         self.res2_conv1 = nn.Conv2d(64, 64,
@@ -249,7 +249,7 @@ class ResNet9(nn.Module):
                                     bias=False,
                                     stride=1)
         self.res2_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res2_conv2 = nn.Conv2d(64, 64,
                                     kernel_size=3,
@@ -257,11 +257,11 @@ class ResNet9(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res2_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res2_dconv = nn.Conv2d(64, 64, 1, stride=2)
         self.res2_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 3
         self.res3_conv1 = nn.Conv2d(64, 128,
@@ -270,7 +270,7 @@ class ResNet9(nn.Module):
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
                                     bias=False)
         self.res3_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_conv2 = nn.Conv2d(128, 128,
                                     kernel_size=3,
@@ -278,11 +278,11 @@ class ResNet9(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res3_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_dconv = nn.Conv2d(64, 128, 1, stride=2)
         self.res3_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 4
         self.res4_conv1 = nn.Conv2d(128, 256,
@@ -291,7 +291,7 @@ class ResNet9(nn.Module):
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
                                     bias=False)
         self.res4_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res4_conv2 = nn.Conv2d(256, 256,
                                     kernel_size=3,
@@ -299,11 +299,11 @@ class ResNet9(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res4_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res4_dconv = nn.Conv2d(128, 256, 1, stride=2)
         self.res4_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # residual block 5
         self.res5_conv1 = nn.Conv2d(256, 512,
@@ -312,7 +312,7 @@ class ResNet9(nn.Module):
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
                                     bias=False)
         self.res5_spike1 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res5_conv2 = nn.Conv2d(512, 512,
                                     kernel_size=3,
@@ -320,11 +320,11 @@ class ResNet9(nn.Module):
                                     bias=False,
                                     stride=2)
         self.res5_spike2 = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res5_dconv = nn.Conv2d(256, 512, 1, stride=2)
         self.res5_dspike = snn.Leaky(
-            beta=0.5, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
+            beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         # classifying layers
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -332,7 +332,7 @@ class ResNet9(nn.Module):
         self.flat = nn.Flatten()
 
         self.fc = nn.Linear(512, 64, bias=False)
-        self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
+        self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
         self.final = nn.Linear(64, out_channels, bias=False)
