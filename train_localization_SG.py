@@ -191,7 +191,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         bbox_preds = model(neural_images)
 
         # loss = criterion(bbox_pred, bbox)
-        final_loss = torch.Tensor(0.).to(device)
+        final_loss = torch.zeros((1), device=device)
         for bbox_pred in bbox_preds:
             loss = criterion(bbox_pred, bbox)
             final_loss += loss
