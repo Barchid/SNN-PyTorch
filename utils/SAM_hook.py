@@ -11,8 +11,9 @@ import torch
 class SAM(object):
     """Some Information about SAM"""
 
-    def __init__(self, layer: nn.Module, input_height: int, input_width: int, gamma=0.4):
+    def __init__(self, layer: nn.Module, name: str, input_height: int, input_width: int, gamma=0.4):
         super(SAM, self).__init__()
+        self.name = name
         self.hook = layer.register_forward_hook(self.hook_save_spikes)
         self.spike_rec = []
         self.gamma = gamma
@@ -21,6 +22,7 @@ class SAM(object):
 
     def hook_save_spikes(self, module, input, output):
         spikes = output[0].detach().cpu().numpy()
+        # print(self.name, ':', np.count_nonzero(spikes))
         self.spike_rec.append(spikes)
 
     def get_sam(self):
@@ -99,7 +101,7 @@ def show_cam_on_image(img: np.ndarray,
     :returns: The default image with the cam overlay.
     """
     heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
-    print(np.unique(np.uint8(255 * mask)))
+    # print(np.unique(np.uint8(255 * mask)))
     if use_rgb:
         heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     heatmap = np.float32(heatmap) / 255
@@ -108,13 +110,13 @@ def show_cam_on_image(img: np.ndarray,
         raise Exception(
             "The input image should np.float32 in the range [0, 1]")
 
-    img = np.squeeze(img) # squeeze if needed
+    img = np.squeeze(img)  # squeeze if needed
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
     cam = heatmap + img
     cam = cam / np.max(cam)
-    print('\nHEATMAP')
-    print(heatmap)
-    print('\nCAM')
-    print(cam)
+    # print('\nHEATMAP')
+    # print(heatmap)
+    # print('\nCAM')
+    # print(cam)
     return np.uint8(255 * cam)

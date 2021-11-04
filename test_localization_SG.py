@@ -42,26 +42,34 @@ GAMMA = 0.4
 
 
 def get_SAM(model: ResNet9, args):
-    spike1 = SAM(model.spike1, args.height, args.width)
-    res2_spike1 = SAM(model.res2_spike1, args.height, args.width)
-    res2_spike2 = SAM(model.res2_spike2, args.height, args.width)
-    res3_spike1 = SAM(model.res3_spike1, args.height, args.width)
-    res3_spike2 = SAM(model.res3_spike2, args.height, args.width)
-    res4_spike1 = SAM(model.res4_spike1, args.height, args.width)
-    res4_spike2 = SAM(model.res4_spike2, args.height, args.width)
-    res5_spike1 = SAM(model.res5_spike1, args.height, args.width)
-    res5_spike2 = SAM(model.res5_spike2, args.height, args.width)
+    spike1 = SAM(model.spike1, 'spike1', args.height, args.width)
+    res2_spike1 = SAM(model.res2_spike1, 'res2_spike1',
+                      args.height, args.width)
+    res2_spike2 = SAM(model.res2_spike2, 'res2_spike2',
+                      args.height, args.width)
+    res3_spike1 = SAM(model.res3_spike1, 'res3_spike1',
+                      args.height, args.width)
+    res3_spike2 = SAM(model.res3_spike2, 'res3_spike2',
+                      args.height, args.width)
+    res4_spike1 = SAM(model.res4_spike1, 'res4_spike1',
+                      args.height, args.width)
+    res4_spike2 = SAM(model.res4_spike2, 'res4_spike2',
+                      args.height, args.width)
+    res5_spike1 = SAM(model.res5_spike1, 'res5_spike1',
+                      args.height, args.width)
+    res5_spike2 = SAM(model.res5_spike2, 'res5_spike2',
+                      args.height, args.width)
 
     return {
-        'spike1': spike1,
-        'res2_spike1': res2_spike1,
-        'res2_spike2': res2_spike2,
-        'res3_spike1': res3_spike1,
-        'res3_spike2': res3_spike2,
-        'res4_spike1': res4_spike1,
+        # 'spike1': spike1,
+        # 'res2_spike1': res2_spike1,
+        # 'res2_spike2': res2_spike2,
+        # 'res3_spike1': res3_spike1,
+        # 'res3_spike2': res3_spike2,
+        # 'res4_spike1': res4_spike1,
         'res4_spike2': res4_spike2,
-        'res5_spike1': res5_spike1,
-        'res5_spike2': res5_spike2
+        # 'res5_spike1': res5_spike1,
+        # 'res5_spike2': res5_spike2
     }
 
 
@@ -73,6 +81,9 @@ def main():
 
     # batch size is forced to 1
     args.batch_size = 1
+
+    # TODO
+    args.neural_coding = 'saccade'
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -97,7 +108,7 @@ def main():
     ).to(device)
 
     # TODO: define loss function
-    criterion = DIoULoss().to(device)
+    criterion = nn.SmoothL1Loss().to(device)
 
     # TODO: define optimizer
     optimizer = torch.optim.Adam(
@@ -110,7 +121,7 @@ def main():
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(args.resume, map_location=device)
             args.start_epoch = checkpoint['epoch']
             best_acc = checkpoint['best_acc']
             model.load_state_dict(checkpoint['state_dict'])

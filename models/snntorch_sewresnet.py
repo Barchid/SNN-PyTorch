@@ -335,7 +335,7 @@ class ResNet9(nn.Module):
         self.fc_spike = snn.Leaky(beta=0.5, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(64, out_channels)
+        self.final = nn.Linear(64, out_channels, bias=False)
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -426,8 +426,11 @@ class ResNet9(nn.Module):
             x = self.fc(x)
             x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
+            # print('spikes bf FC', torch.count_nonzero(x))
             x = self.final(x)
+            # print('nonspike FC', x, '\n')
 
             accumulator += x
 
+        print(accumulator)
         return torch.sigmoid(accumulator)
