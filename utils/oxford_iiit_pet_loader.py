@@ -176,6 +176,9 @@ def DOG_transform(image, sigma1=1.0, sigma2=4.0, kernel_size=7):
 
 
 def on_off_filtering(image, sigma_center=1.0, sigma_surround=4.0, kernel_size=7):
+    if image.dtype == np.uint8:
+        image = image.astype(np.float32) / 255.
+
     G_center = cv2.GaussianBlur(image, (kernel_size, kernel_size),
                                 sigmaX=sigma_center, sigmaY=sigma_center)
     G_surround = cv2.GaussianBlur(image, (kernel_size, kernel_size),
@@ -184,7 +187,11 @@ def on_off_filtering(image, sigma_center=1.0, sigma_surround=4.0, kernel_size=7)
 
     ON = np.clip(DOG, 0., None)
     OFF = np.clip(-DOG, 0., None)
-    return np.stack([ON, OFF], axis=2).astype(np.uint8)
+    on_off = np.stack([ON, OFF], axis=2)  # .astype(np.float32)
+    # ensure range between 0 and 1
+    on_off /= np.max(on_off)
+    on_off *= 255
+    return on_off.astype(np.uint8)
 
 # class OnOffFiltering(ImageOnlyTransform):
 #     def __init__(self,  sigma_center=1.0, sigma_surround=4.0, kernel_size=7):
@@ -352,9 +359,7 @@ class OxfordPetDatasetLocalization(Dataset):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if self.use_DOG:
-            print(image.shape)
             image = on_off_filtering(image)
-            print(image.shape)
 
         # get class from classes directory
         class_id = get_class_from_filename(image_filename)
@@ -430,13 +435,13 @@ def visualize_augmentations(dataset, idx=0, samples=5):
 if __name__ == "__main__":
     im = cv2.imread('input.jpg', cv2.IMREAD_GRAYSCALE)
     # im = cv2.resize(im, (176, 240))
-    im = im/255.
+    # im = im/255.
 
     lol = on_off_filtering(im)
     print(lol.shape)
 
-    ON = lol[0]
-    OFF = lol[1]
+    ON = lol[:, :, 0]
+    OFF = lol[:, :, 1]
 
     plt.imshow(ON)
     plt.show()
