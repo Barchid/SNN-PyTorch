@@ -432,6 +432,4 @@ class ResNet9(nn.Module):
             accumulator += x
 
         # print(accumulator / self.timesteps)
-        print(accumulator)
-        print(self.final.weight, '\n\n')
-        return accumulator / self.timesteps
+        return accumulator #/ self.timesteps
