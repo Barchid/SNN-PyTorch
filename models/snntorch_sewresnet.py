@@ -426,7 +426,10 @@ class ResNet9(nn.Module):
             x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
             accumulator += x
-        output = self.final(accumulator)
 
+        print(accumulator)
+        output = self.final(accumulator)
+        print(output)
+        print('\n')
         # print(accumulator)
         return torch.sigmoid(output)
