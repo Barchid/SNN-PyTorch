@@ -34,7 +34,7 @@ class SEWBottleneck(nn.Module):
                                kernel_size=kernel_size,
                                padding=kernel_size//2 + dilation - 1,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                dilation=dilation,
                                stride=1)
         self.spike1 = snn.Leaky(
@@ -44,7 +44,7 @@ class SEWBottleneck(nn.Module):
                                kernel_size=kernel_size,
                                padding=kernel_size//2 + dilation - 1,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                dilation=dilation,
                                stride=stride)
         self.spike2 = snn.Leaky(
@@ -106,7 +106,7 @@ class ResNet5(nn.Module):
                                kernel_size=7,
                                padding=3,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
@@ -117,7 +117,7 @@ class ResNet5(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False,
+                                    bias=True,
                                     stride=1)
         self.res2_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -125,7 +125,7 @@ class ResNet5(nn.Module):
         self.res2_conv2 = nn.Conv2d(64, 64,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res2_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -139,14 +139,14 @@ class ResNet5(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False)
+                                    bias=True)
         self.res3_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_conv2 = nn.Conv2d(128, 128,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res3_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -160,7 +160,7 @@ class ResNet5(nn.Module):
 
         self.flat = nn.Flatten()
 
-        self.fc = nn.Linear(128, 32, bias=False)
+        self.fc = nn.Linear(128, 32, bias=True)
         self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
@@ -235,7 +235,7 @@ class ResNet9(nn.Module):
                                kernel_size=7,
                                padding=3,
                                # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                               bias=False,
+                               bias=True,
                                dilation=1,
                                stride=2)
         self.spike1 = snn.Leaky(
@@ -246,7 +246,7 @@ class ResNet9(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False,
+                                    bias=True,
                                     stride=1)
         self.res2_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -254,7 +254,7 @@ class ResNet9(nn.Module):
         self.res2_conv2 = nn.Conv2d(64, 64,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res2_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -268,14 +268,14 @@ class ResNet9(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False)
+                                    bias=True)
         self.res3_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res3_conv2 = nn.Conv2d(128, 128,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res3_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -289,14 +289,14 @@ class ResNet9(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False)
+                                    bias=True)
         self.res4_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res4_conv2 = nn.Conv2d(256, 256,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res4_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -310,14 +310,14 @@ class ResNet9(nn.Module):
                                     kernel_size=3,
                                     padding=1,
                                     # no bias because it is not bio-plausible (and hard to impl in neuromorphic hardware)
-                                    bias=False)
+                                    bias=True)
         self.res5_spike1 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
 
         self.res5_conv2 = nn.Conv2d(512, 512,
                                     kernel_size=3,
                                     padding=1,
-                                    bias=False,
+                                    bias=True,
                                     stride=2)
         self.res5_spike2 = snn.Leaky(
             beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25), init_hidden=False)
@@ -331,11 +331,11 @@ class ResNet9(nn.Module):
 
         self.flat = nn.Flatten()
 
-        self.fc = nn.Linear(512, 64, bias=False)
+        self.fc = nn.Linear(512, 64, bias=True)
         self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(64, out_channels, bias=False)
+        self.final = nn.Linear(64, out_channels, bias=True)
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -427,7 +427,7 @@ class ResNet9(nn.Module):
             x, mem_fc_spike = self.fc_spike(x, mem_fc_spike)
 
             accumulator += x
-
+        # print(torch.count_nonzero(accumulator.clone().))
         output = self.final(accumulator)
 
         # print(accumulator)
