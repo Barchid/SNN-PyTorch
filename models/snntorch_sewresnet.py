@@ -164,7 +164,8 @@ class ResNet5(nn.Module):
         self.fc_spike = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(
             slope=25), init_hidden=False, output=True)
 
-        self.final = nn.Linear(32, out_channels)
+        self.final = nn.Linear(32, out_channels, bias=False)
+        self.final.weight.requires_grad = False
 
     def forward(self, inputs):
         # resets every LIF neurons
@@ -360,7 +361,7 @@ class ResNet9(nn.Module):
         mem_fc_spike = self.fc_spike.init_leaky()
 
         # spike accumulator to get the prediction
-        accumulator = []
+        accumulator = 0.
 
         for k in range(self.timesteps):
             x = inputs[k, :, :, :, :]
@@ -427,7 +428,7 @@ class ResNet9(nn.Module):
 
             x = self.final(x)
 
-            accumulator.append(x)
+            accumulator += x
 
         # print(accumulator / self.timesteps)
-        return accumulator
+        return accumulator / self.timesteps

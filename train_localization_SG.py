@@ -65,7 +65,7 @@ def main():
         os.mkdir(os.path.join('experiments', args.experiment))
 
     # TODO: define model
-    model = Baseline5(
+    model = ResNet9(
         # if on/off filtering, there is 2 channels (else, there is 1)
         2 if args.on_off else 1,
         4,
@@ -188,23 +188,20 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
         neural_images = neural_images.to(device)
         bbox = bbox.to(device)
 
-        bbox_preds = model(neural_images)
+        bbox_pred = model(neural_images)
 
         # loss = criterion(bbox_pred, bbox)
-        final_loss = torch.zeros((1), device=device)
-        for bbox_pred in bbox_preds:
-            loss = criterion(bbox_pred, bbox)
-            final_loss += loss
+        loss = criterion(bbox_pred, bbox)
 
         # compute gradient and do SGD step (if training)
         if is_training:
             optimizer.zero_grad()
-            final_loss.backward()
+            loss.backward()
             optimizer.step()
 
         # measure accuracy and record loss
         iou = compute_IoU(bbox_pred.detach().cpu(), bbox.detach().cpu())
-        losses.update(final_loss.item(), images.size(0))
+        losses.update(loss.item(), images.size(0))
         ious.update(iou.item(), images.size(0))
 
         # measure elapsed time
