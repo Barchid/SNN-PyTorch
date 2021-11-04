@@ -204,7 +204,7 @@ def one_epoch(dataloader, model, criterion, epoch, args, tensorboard_meter: Tens
 
         # measure accuracy and record loss
         iou = compute_IoU(bbox_pred.detach().cpu(), bbox.detach().cpu())
-        losses.update(loss.item(), images.size(0))
+        losses.update(final_loss.item(), images.size(0))
         ious.update(iou.item(), images.size(0))
 
         # measure elapsed time
